@@ -1,0 +1,23 @@
+{
+    "name": "BetterScriptable.Editor.Tests",
+    "rootNamespace": "BetterScriptable.Tests.Editor",
+    "references": [
+        "BetterScriptable.Runtime",
+        "BetterScriptable.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false,
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ]
+}
+
