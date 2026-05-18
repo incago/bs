@@ -19,7 +19,7 @@ namespace BetterScriptable.Editor
         private const float FormulaRowHeight = 22f;
         private const float TableRowHeight = 22f;
         private const float TableHeaderHeight = TableRowHeight * 2f;
-        private const float HorizontalScrollbarPadding = 18f;
+        private const float HorizontalScrollbarHeight = 16f;
         private const float TableLayoutPadding = 6f;
 
         private IMGUIContainer _imguiContainer;
@@ -192,11 +192,11 @@ namespace BetterScriptable.Editor
             EditorGUI.BeginChangeCheck();
             DrawHeader();
             DrawNonArrayProperties();
+            DrawArrayDataTabBar();
+            DrawSelectedArrayFormulaPanel();
             EditorGUILayout.Space(8);
 
-            _propertyScroll = EditorGUILayout.BeginScrollView(_propertyScroll);
             DrawSelectedArrayTable();
-            EditorGUILayout.EndScrollView();
 
             DrawFooter();
 
@@ -345,6 +345,26 @@ namespace BetterScriptable.Editor
             }
         }
 
+        private void DrawSelectedArrayFormulaPanel()
+        {
+            if (_arrayPropertyPaths.Count == 0)
+            {
+                return;
+            }
+
+            _selectedArrayIndex = Mathf.Clamp(_selectedArrayIndex, 0, _arrayPropertyPaths.Count - 1);
+            SerializedProperty arrayProperty = _serializedObject.FindProperty(_arrayPropertyPaths[_selectedArrayIndex]);
+            if (arrayProperty == null)
+            {
+                return;
+            }
+
+            EditorGUILayout.Space(8);
+            List<TableColumn> columns = GetColumns(arrayProperty);
+            BetterScriptableSheetState sheetState = GetOrCreateSheetState(arrayProperty);
+            DrawFormulaPanel(arrayProperty, columns, sheetState);
+        }
+
         private void DrawSelectedArrayTable()
         {
             EditorGUILayout.LabelField("Array Table", EditorStyles.boldLabel);
@@ -365,7 +385,6 @@ namespace BetterScriptable.Editor
 
             List<TableColumn> columns = GetColumns(arrayProperty);
             BetterScriptableSheetState sheetState = GetOrCreateSheetState(arrayProperty);
-            DrawFormulaPanel(arrayProperty, columns, sheetState);
             DrawArrayToolbar(arrayProperty, sheetState);
             DrawArrayGrid(arrayProperty, columns, sheetState);
         }
@@ -504,7 +523,6 @@ namespace BetterScriptable.Editor
         {
             using (new EditorGUILayout.HorizontalScope())
             {
-                EditorGUILayout.LabelField(arrayProperty.displayName, EditorStyles.boldLabel);
                 GUILayout.FlexibleSpace();
 
                 if (GUILayout.Button("Add Row", GUILayout.Width(92)))
@@ -539,35 +557,104 @@ namespace BetterScriptable.Editor
             List<TableColumn> columns,
             BetterScriptableSheetState sheetState)
         {
-            bool rowStructureChanged = false;
             HashSet<string> formulaTargetKeys = GetFormulaTargetKeys(sheetState, arrayProperty.arraySize, columns);
-            float gridWidth = CalculateGridWidth(columns);
-            bool useHorizontalScroll = ShouldUseHorizontalGridScroll(gridWidth);
+            float frozenWidth = CalculateFrozenRowHeaderWidth();
+            float dataWidth = CalculateDataGridWidth(columns);
+            float dataViewportWidth = CalculateDataGridViewportWidth(frozenWidth);
+            bool useHorizontalScroll = ShouldUseHorizontalGridScroll(dataWidth, dataViewportWidth);
+            _tableScroll.x = useHorizontalScroll
+                ? Mathf.Clamp(_tableScroll.x, 0f, Mathf.Max(0f, dataWidth - dataViewportWidth))
+                : 0f;
+
+            DrawFrozenGridHeader(columns, dataWidth, dataViewportWidth, frozenWidth, useHorizontalScroll);
+            DrawFrozenGridHorizontalScrollbar(frozenWidth, dataWidth, dataViewportWidth, useHorizontalScroll);
+
+            if (arrayProperty.arraySize == 0)
+            {
+                EditorGUILayout.HelpBox("No rows. Use Add Row to start entering data.", MessageType.None);
+                return;
+            }
+
+            DrawFrozenGridRows(
+                arrayProperty,
+                columns,
+                sheetState,
+                formulaTargetKeys,
+                dataWidth,
+                dataViewportWidth,
+                frozenWidth,
+                useHorizontalScroll);
+        }
+
+        private void DrawFrozenGridHeader(
+            List<TableColumn> columns,
+            float dataWidth,
+            float dataViewportWidth,
+            float frozenWidth,
+            bool useHorizontalScroll)
+        {
+            float headerHeight = CalculateGridHeaderHeight();
+            using (new EditorGUILayout.HorizontalScope(GUILayout.Height(headerHeight)))
+            {
+                DrawFrozenGridCorner(frozenWidth, headerHeight);
+                DrawColumnHeaderCells(columns, dataWidth, dataViewportWidth, headerHeight, useHorizontalScroll);
+            }
+        }
+
+        private static void DrawFrozenGridCorner(float frozenWidth, float headerHeight)
+        {
+            using (new EditorGUILayout.VerticalScope(GUILayout.Width(frozenWidth), GUILayout.Height(headerHeight)))
+            {
+                using (new EditorGUILayout.HorizontalScope(GUILayout.Height(TableRowHeight)))
+                {
+                    GUILayout.Label("#", EditorStyles.boldLabel, GUILayout.Width(RowNumberWidth));
+                    GUILayout.Space(RowButtonWidth * 2f + 6f);
+                }
+
+                GUILayout.Space(EditorGUIUtility.standardVerticalSpacing);
+
+                using (new EditorGUILayout.HorizontalScope(GUILayout.Height(TableRowHeight)))
+                {
+                    GUILayout.Space(frozenWidth);
+                }
+            }
+        }
+
+        private void DrawColumnHeaderCells(
+            List<TableColumn> columns,
+            float dataWidth,
+            float dataViewportWidth,
+            float headerHeight,
+            bool useHorizontalScroll)
+        {
             if (useHorizontalScroll)
             {
-                _tableScroll.y = 0f;
-                float gridHeight = CalculateGridContentHeight(arrayProperty.arraySize, includesHorizontalScrollbar: true);
-                _tableScroll = GUILayout.BeginScrollView(
-                    _tableScroll,
-                    false,
-                    false,
-                    GUI.skin.horizontalScrollbar,
-                    GUIStyle.none,
-                    GUILayout.Height(gridHeight));
-                _tableScroll.y = 0f;
+                Rect viewportRect = GUILayoutUtility.GetRect(
+                    dataViewportWidth,
+                    headerHeight,
+                    GUILayout.Width(dataViewportWidth),
+                    GUILayout.Height(headerHeight));
+                DrawClippedTableArea(viewportRect, dataWidth, headerHeight, () =>
+                {
+                    DrawColumnHeaderContent(columns, dataWidth, headerHeight);
+                });
             }
             else
             {
                 _tableScroll = Vector2.zero;
+                DrawColumnHeaderContent(columns, dataWidth, headerHeight);
             }
+        }
 
-            using (new EditorGUILayout.VerticalScope(GUILayout.MinWidth(gridWidth)))
+        private static void DrawColumnHeaderContent(
+            List<TableColumn> columns,
+            float dataWidth,
+            float headerHeight)
+        {
+            using (new EditorGUILayout.VerticalScope(GUILayout.Width(dataWidth), GUILayout.Height(headerHeight)))
             {
-                using (new EditorGUILayout.HorizontalScope())
+                using (new EditorGUILayout.HorizontalScope(GUILayout.Height(TableRowHeight)))
                 {
-                    GUILayout.Label("#", EditorStyles.boldLabel, GUILayout.Width(RowNumberWidth));
-                    GUILayout.Space(RowButtonWidth * 2f + 6f);
-
                     for (int columnIndex = 0; columnIndex < columns.Count; columnIndex++)
                     {
                         TableColumn column = columns[columnIndex];
@@ -575,25 +662,102 @@ namespace BetterScriptable.Editor
                     }
                 }
 
-                using (new EditorGUILayout.HorizontalScope())
+                using (new EditorGUILayout.HorizontalScope(GUILayout.Height(TableRowHeight)))
                 {
-                    GUILayout.Space(RowNumberWidth + RowButtonWidth * 2f + 6f);
-
                     foreach (TableColumn column in columns)
                     {
                         GUILayout.Label(column.HeaderLabel, EditorStyles.miniLabel, GUILayout.Width(column.Width));
                     }
                 }
+            }
+        }
 
-                if (arrayProperty.arraySize == 0)
+        private void DrawFrozenGridHorizontalScrollbar(
+            float frozenWidth,
+            float dataWidth,
+            float dataViewportWidth,
+            bool useHorizontalScroll)
+        {
+            if (!useHorizontalScroll)
+            {
+                return;
+            }
+
+            float maxScroll = Mathf.Max(0f, dataWidth - dataViewportWidth);
+            _tableScroll.x = Mathf.Clamp(_tableScroll.x, 0f, maxScroll);
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                GUILayout.Space(frozenWidth);
+                EditorGUI.BeginChangeCheck();
+                Rect scrollbarRect = GUILayoutUtility.GetRect(
+                    dataViewportWidth,
+                    HorizontalScrollbarHeight,
+                    GUILayout.Width(dataViewportWidth),
+                    GUILayout.Height(HorizontalScrollbarHeight));
+                _tableScroll.x = GUI.HorizontalScrollbar(
+                    scrollbarRect,
+                    _tableScroll.x,
+                    dataViewportWidth,
+                    0f,
+                    dataWidth);
+                if (EditorGUI.EndChangeCheck())
                 {
-                    EditorGUILayout.HelpBox("No rows. Use Add Row to start entering data.", MessageType.None);
+                    Repaint();
                 }
+            }
+        }
 
+        private void DrawFrozenGridRows(
+            SerializedProperty arrayProperty,
+            List<TableColumn> columns,
+            BetterScriptableSheetState sheetState,
+            HashSet<string> formulaTargetKeys,
+            float dataWidth,
+            float dataViewportWidth,
+            float frozenWidth,
+            bool useHorizontalScroll)
+        {
+            float rowContentHeight = CalculateGridRowContentHeight(arrayProperty.arraySize);
+            float dataHeight = rowContentHeight;
+
+            _propertyScroll.x = 0f;
+            _propertyScroll = GUILayout.BeginScrollView(
+                _propertyScroll,
+                false,
+                false,
+                GUIStyle.none,
+                GUI.skin.verticalScrollbar,
+                GUILayout.ExpandHeight(true));
+            _propertyScroll.x = 0f;
+
+            using (new EditorGUILayout.HorizontalScope(GUILayout.Height(dataHeight)))
+            {
+                DrawFrozenRowHeaders(arrayProperty, sheetState, frozenWidth, rowContentHeight);
+                DrawScrollableRowCells(
+                    arrayProperty,
+                    columns,
+                    formulaTargetKeys,
+                    sheetState,
+                    dataWidth,
+                    dataViewportWidth,
+                    dataHeight,
+                    useHorizontalScroll);
+            }
+
+            GUILayout.EndScrollView();
+        }
+
+        private void DrawFrozenRowHeaders(
+            SerializedProperty arrayProperty,
+            BetterScriptableSheetState sheetState,
+            float frozenWidth,
+            float rowContentHeight)
+        {
+            using (new EditorGUILayout.VerticalScope(GUILayout.Width(frozenWidth), GUILayout.Height(rowContentHeight)))
+            {
                 for (int row = 0; row < arrayProperty.arraySize; row++)
                 {
-                    SerializedProperty element = arrayProperty.GetArrayElementAtIndex(row);
-                    bool stopDrawingRows = false;
                     using (new EditorGUILayout.HorizontalScope(GUILayout.Height(TableRowHeight)))
                     {
                         GUILayout.Label((row + 1).ToString(), GUILayout.Width(RowNumberWidth));
@@ -602,47 +766,93 @@ namespace BetterScriptable.Editor
                         {
                             InsertArrayRow(arrayProperty, row);
                             ShiftSheetCellsForInsert(sheetState, row);
-                            rowStructureChanged = true;
-                            stopDrawingRows = true;
+                            CompleteRowStructureChange(arrayProperty, columnsChanged: false, sheetState);
                         }
 
-                        using (new EditorGUI.DisabledScope(stopDrawingRows))
+                        if (GUILayout.Button("-", GUILayout.Width(RowButtonWidth)))
                         {
-                            if (GUILayout.Button("-", GUILayout.Width(RowButtonWidth)))
-                            {
-                                DeleteArrayRow(arrayProperty, row);
-                                ShiftSheetCellsForDelete(sheetState, row);
-                                rowStructureChanged = true;
-                                stopDrawingRows = true;
-                            }
+                            DeleteArrayRow(arrayProperty, row);
+                            ShiftSheetCellsForDelete(sheetState, row);
+                            CompleteRowStructureChange(arrayProperty, columnsChanged: false, sheetState);
                         }
-
-                        if (!stopDrawingRows)
-                        {
-                            DrawRowCells(arrayProperty, element, columns, row, formulaTargetKeys, sheetState);
-                        }
-                    }
-
-                    if (stopDrawingRows)
-                    {
-                        break;
                     }
                 }
             }
+        }
 
+        private void DrawScrollableRowCells(
+            SerializedProperty arrayProperty,
+            List<TableColumn> columns,
+            HashSet<string> formulaTargetKeys,
+            BetterScriptableSheetState sheetState,
+            float dataWidth,
+            float dataViewportWidth,
+            float dataHeight,
+            bool useHorizontalScroll)
+        {
             if (useHorizontalScroll)
             {
-                EditorGUILayout.EndScrollView();
+                Rect viewportRect = GUILayoutUtility.GetRect(
+                    dataViewportWidth,
+                    dataHeight,
+                    GUILayout.Width(dataViewportWidth),
+                    GUILayout.Height(dataHeight));
+                DrawClippedTableArea(viewportRect, dataWidth, dataHeight, () =>
+                {
+                    DrawDataRows(arrayProperty, columns, formulaTargetKeys, sheetState, dataWidth);
+                });
+                return;
             }
 
-            if (rowStructureChanged)
+            _tableScroll = Vector2.zero;
+            DrawDataRows(arrayProperty, columns, formulaTargetKeys, sheetState, dataWidth);
+        }
+
+        private void DrawDataRows(
+            SerializedProperty arrayProperty,
+            List<TableColumn> columns,
+            HashSet<string> formulaTargetKeys,
+            BetterScriptableSheetState sheetState,
+            float dataWidth)
+        {
+            using (new EditorGUILayout.VerticalScope(GUILayout.Width(dataWidth)))
             {
-                _serializedObject.ApplyModifiedProperties();
-                _isDocumentDirty = true;
-                ApplyFormulas(arrayProperty, columns, sheetState, markDirty: true);
-                RefreshArrayPropertyPaths();
-                Repaint();
+                for (int row = 0; row < arrayProperty.arraySize; row++)
+                {
+                    SerializedProperty element = arrayProperty.GetArrayElementAtIndex(row);
+                    using (new EditorGUILayout.HorizontalScope(GUILayout.Height(TableRowHeight)))
+                    {
+                        DrawRowCells(arrayProperty, element, columns, row, formulaTargetKeys, sheetState);
+                    }
+                }
             }
+        }
+
+        private void DrawClippedTableArea(Rect viewportRect, float contentWidth, float contentHeight, Action drawContent)
+        {
+            GUI.BeginGroup(viewportRect);
+            GUILayout.BeginArea(new Rect(-_tableScroll.x, 0f, contentWidth, contentHeight));
+            drawContent();
+            GUILayout.EndArea();
+            GUI.EndGroup();
+        }
+
+        private void CompleteRowStructureChange(
+            SerializedProperty arrayProperty,
+            bool columnsChanged,
+            BetterScriptableSheetState sheetState)
+        {
+            _serializedObject.ApplyModifiedProperties();
+            _isDocumentDirty = true;
+            if (columnsChanged)
+            {
+                RefreshArrayPropertyPaths();
+            }
+
+            List<TableColumn> columns = GetColumns(arrayProperty);
+            ApplyFormulas(arrayProperty, columns, sheetState, markDirty: true);
+            Repaint();
+            GUIUtility.ExitGUI();
         }
 
         private void DrawRowCells(
@@ -1072,12 +1282,20 @@ namespace BetterScriptable.Editor
             EditorGUILayout.Space(6);
             using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
             {
-                DrawArrayDataButtons();
-
                 GUILayout.FlexibleSpace();
                 GUILayout.Label(_isDocumentDirty ? "Unsaved" : "Saved", EditorStyles.miniLabel);
                 GUILayout.Space(8);
                 GUILayout.Label(BetterScriptableDocumentIO.ResolveLinkedAssetPath(_document), EditorStyles.miniLabel);
+            }
+        }
+
+        private void DrawArrayDataTabBar()
+        {
+            EditorGUILayout.Space(8);
+            using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
+            {
+                DrawArrayDataButtons();
+                GUILayout.FlexibleSpace();
             }
         }
 
@@ -1822,9 +2040,19 @@ namespace BetterScriptable.Editor
                 isDesignField);
         }
 
-        private static float CalculateGridWidth(List<TableColumn> columns)
+        private static float CalculateFrozenRowHeaderWidth()
         {
-            float width = RowNumberWidth + RowButtonWidth * 2f + 6f;
+            return RowNumberWidth + RowButtonWidth * 2f + 6f;
+        }
+
+        private static float CalculateDataGridWidth(List<TableColumn> columns)
+        {
+            if (columns.Count == 0)
+            {
+                return DefaultColumnWidth;
+            }
+
+            float width = 0f;
             foreach (TableColumn column in columns)
             {
                 width += column.Width;
@@ -1838,18 +2066,28 @@ namespace BetterScriptable.Editor
             return Mathf.Clamp(EditorStyles.label.CalcSize(new GUIContent(label)).x + 48f, MinimumColumnWidth, MaximumColumnWidth);
         }
 
-        private static float CalculateGridContentHeight(int rowCount, bool includesHorizontalScrollbar)
+        private static float CalculateGridHeaderHeight()
         {
-            float height = TableHeaderHeight + Mathf.Max(rowCount, 1) * TableRowHeight + TableLayoutPadding;
-            int verticalItemCount = 2 + Mathf.Max(rowCount, 1);
-            height += Mathf.Max(0, verticalItemCount - 1) * EditorGUIUtility.standardVerticalSpacing;
-            return includesHorizontalScrollbar ? height + HorizontalScrollbarPadding : height;
+            return TableHeaderHeight + EditorGUIUtility.standardVerticalSpacing;
         }
 
-        private static bool ShouldUseHorizontalGridScroll(float gridWidth)
+        private static float CalculateGridRowContentHeight(int rowCount)
+        {
+            int visibleRows = Mathf.Max(rowCount, 1);
+            float height = visibleRows * TableRowHeight + TableLayoutPadding;
+            height += Mathf.Max(0, visibleRows - 1) * EditorGUIUtility.standardVerticalSpacing;
+            return height;
+        }
+
+        private static float CalculateDataGridViewportWidth(float frozenWidth)
         {
             float availableWidth = Mathf.Max(0f, EditorGUIUtility.currentViewWidth - 32f);
-            return gridWidth > availableWidth;
+            return Mathf.Max(DefaultColumnWidth, availableWidth - frozenWidth);
+        }
+
+        private static bool ShouldUseHorizontalGridScroll(float dataWidth, float dataViewportWidth)
+        {
+            return dataWidth > dataViewportWidth;
         }
 
         private static string NormalizeTypeName(string typeName)
