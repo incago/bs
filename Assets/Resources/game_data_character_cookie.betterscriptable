@@ -1,0 +1,83 @@
+{
+    "Version": 1,
+    "AssetGuid": "ee4bda776b67b42ccb94f8b78b7fa575",
+    "AssetPath": "Assets/Resources/game_data_character_cookie.asset",
+    "AssetTypeName": "BetterScriptable.Generated.CharacterDataAsset, Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "SerializedAssetJson": "{\n    \"MonoBehaviour\": {\n        \"m_Enabled\": true,\n        \"m_EditorHideFlags\": 0,\n        \"m_Name\": \"game_data_character_cookie\",\n        \"m_EditorClassIdentifier\": \"Assembly-CSharp::BetterScriptable.Generated.CharacterDataAsset\",\n        \"_characterType\": \"Cookie\",\n        \"_characterDatas\": [\n            {\n                \"_id\": 1,\n                \"_weight\": 10.0,\n                \"_thumbnailResourceKey\": \"cookie0001_thumbnail\",\n                \"_spineResourceKey\": \"cookie0001_skeletonData\"\n            }\n        ]\n    }\n}",
+    "Schema": {
+        "AssetClassName": "CharacterDataAsset",
+        "NamespaceName": "BetterScriptable.Generated",
+        "MenuPath": "BetterScriptable/game_data_character",
+        "Fields": [
+            {
+                "TypeName": "string",
+                "Name": "CharacterType",
+                "IsDesignField": false
+            }
+        ],
+        "Tables": [
+            {
+                "RowTypeName": "CharacterData",
+                "FieldName": "CharacterDatas",
+                "Fields": [
+                    {
+                        "TypeName": "int",
+                        "Name": "Id",
+                        "IsDesignField": false
+                    },
+                    {
+                        "TypeName": "float",
+                        "Name": "Weight",
+                        "IsDesignField": false
+                    },
+                    {
+                        "TypeName": "string",
+                        "Name": "ResourceName",
+                        "IsDesignField": true
+                    },
+                    {
+                        "TypeName": "string",
+                        "Name": "ThumbnailResourceKey",
+                        "IsDesignField": false
+                    },
+                    {
+                        "TypeName": "string",
+                        "Name": "SpineResourceKey",
+                        "IsDesignField": false
+                    }
+                ]
+            }
+        ]
+    },
+    "Sheets": [
+        {
+            "ArrayFieldName": "CharacterDatas",
+            "Formulas": [
+                {
+                    "Id": "82e6deffc10744a99aefd051c2ec12dd",
+                    "Enabled": true,
+                    "Expression": "C = 'cookie' + FORMAT(A, '0000')"
+                },
+                {
+                    "Id": "03a580b69ede4cccbc027cb1fb5806f8",
+                    "Enabled": true,
+                    "Expression": "D = C + '_thumbnail'"
+                },
+                {
+                    "Id": "c9b7b77d01904e12a83af0534b7c87bb",
+                    "Enabled": true,
+                    "Expression": "E = C + '_skeletonData'"
+                }
+            ],
+            "Cells": [
+                {
+                    "Row": 0,
+                    "ColumnName": "ResourceName",
+                    "Value": "cookie0001",
+                    "Formula": "",
+                    "Note": ""
+                }
+            ]
+        }
+    ]
+}

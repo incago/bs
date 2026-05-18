@@ -1,0 +1,38 @@
+{
+    "Version": 1,
+    "AssetGuid": "e6f29174201d44d15af4cc97c3b584fe",
+    "AssetPath": "Assets/Resources/game_data_stage.asset",
+    "AssetTypeName": "StageDataAsset, Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "SerializedAssetJson": "{\n    \"MonoBehaviour\": {\n        \"m_Enabled\": true,\n        \"m_EditorHideFlags\": 0,\n        \"m_Name\": \"game_data_stage\",\n        \"m_EditorClassIdentifier\": \"Assembly-CSharp::StageDataAsset\",\n        \"_stageDatas\": [\n            {\n                \"_id\": 1,\n                \"_name\": \"Sprint\"\n            },\n            {\n                \"_id\": 2,\n                \"_name\": \"Summer\"\n            }\n        ]\n    }\n}",
+    "Schema": {
+        "AssetClassName": "StageDataAsset",
+        "NamespaceName": "",
+        "MenuPath": "BetterScriptable/game_data_stage",
+        "Fields": [],
+        "Tables": [
+            {
+                "RowTypeName": "StageData",
+                "FieldName": "StageDatas",
+                "Fields": [
+                    {
+                        "TypeName": "int",
+                        "Name": "Id",
+                        "IsDesignField": false
+                    },
+                    {
+                        "TypeName": "string",
+                        "Name": "Name",
+                        "IsDesignField": false
+                    }
+                ]
+            }
+        ]
+    },
+    "Sheets": [
+        {
+            "ArrayFieldName": "StageDatas",
+            "Formulas": [],
+            "Cells": []
+        }
+    ]
+}

@@ -1,0 +1,83 @@
+{
+    "Version": 1,
+    "AssetGuid": "8fe5b8218e8f448b89d5aeefc481683d",
+    "AssetPath": "Assets/Resources/game_data_character_monster.asset",
+    "AssetTypeName": "BetterScriptable.Generated.CharacterDataAsset, Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "SerializedAssetJson": "{\n    \"MonoBehaviour\": {\n        \"m_Enabled\": true,\n        \"m_EditorHideFlags\": 0,\n        \"m_Name\": \"game_data_character_monster\",\n        \"m_EditorClassIdentifier\": \"Assembly-CSharp::BetterScriptable.Generated.CharacterDataAsset\",\n        \"_characterType\": \"Monster\",\n        \"_characterDatas\": [\n            {\n                \"_id\": 1310111,\n                \"_weight\": 10.0,\n                \"_thumbnailResourceKey\": \"m1310111_thumbnail\",\n                \"_spineResourceKey\": \"m1310111_skeletonData\"\n            }\n        ]\n    }\n}",
+    "Schema": {
+        "AssetClassName": "CharacterDataAsset",
+        "NamespaceName": "BetterScriptable.Generated",
+        "MenuPath": "BetterScriptable/game_data_character",
+        "Fields": [
+            {
+                "TypeName": "string",
+                "Name": "CharacterType",
+                "IsDesignField": false
+            }
+        ],
+        "Tables": [
+            {
+                "RowTypeName": "CharacterData",
+                "FieldName": "CharacterDatas",
+                "Fields": [
+                    {
+                        "TypeName": "int",
+                        "Name": "Id",
+                        "IsDesignField": false
+                    },
+                    {
+                        "TypeName": "float",
+                        "Name": "Weight",
+                        "IsDesignField": false
+                    },
+                    {
+                        "TypeName": "string",
+                        "Name": "ResourceName",
+                        "IsDesignField": true
+                    },
+                    {
+                        "TypeName": "string",
+                        "Name": "ThumbnailResourceKey",
+                        "IsDesignField": false
+                    },
+                    {
+                        "TypeName": "string",
+                        "Name": "SpineResourceKey",
+                        "IsDesignField": false
+                    }
+                ]
+            }
+        ]
+    },
+    "Sheets": [
+        {
+            "ArrayFieldName": "CharacterDatas",
+            "Formulas": [
+                {
+                    "Id": "d9b7484f54594b4ca834bc9ea01fb5ab",
+                    "Enabled": true,
+                    "Expression": "C = 'm' + A"
+                },
+                {
+                    "Id": "7a418330e0c1481880a673369d52e253",
+                    "Enabled": true,
+                    "Expression": "D = C + '_thumbnail'"
+                },
+                {
+                    "Id": "8e72c7d69f4342e9ac845686e237355e",
+                    "Enabled": true,
+                    "Expression": "E = C + '_skeletonData'"
+                }
+            ],
+            "Cells": [
+                {
+                    "Row": 0,
+                    "ColumnName": "ResourceName",
+                    "Value": "m1310111",
+                    "Formula": "",
+                    "Note": ""
+                }
+            ]
+        }
+    ]
+}

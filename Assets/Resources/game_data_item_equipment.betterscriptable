@@ -1,0 +1,49 @@
+{
+    "Version": 1,
+    "AssetGuid": "bedc9b14235f347a8bafd8acb50ee3e7",
+    "AssetPath": "Assets/Resources/game_data_item_equipment.asset",
+    "AssetTypeName": "BetterScriptable.Generated.ItemDataAsset, Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "SerializedAssetJson": "{\n    \"MonoBehaviour\": {\n        \"m_Enabled\": true,\n        \"m_EditorHideFlags\": 0,\n        \"m_Name\": \"game_data_item_equipment\",\n        \"m_EditorClassIdentifier\": \"Assembly-CSharp::BetterScriptable.Generated.ItemDataAsset\",\n        \"_itemCategory\": \"\",\n        \"_itemDatas\": [\n            {\n                \"_id\": 1,\n                \"_weight\": 10.0,\n                \"_position\": {\n                    \"x\": 5.0,\n                    \"y\": 5.0\n                }\n            }\n        ]\n    }\n}",
+    "Schema": {
+        "AssetClassName": "ItemDataAsset",
+        "NamespaceName": "BetterScriptable.Generated",
+        "MenuPath": "BetterScriptable/game_data_item",
+        "Fields": [
+            {
+                "TypeName": "string",
+                "Name": "ItemCategory",
+                "IsDesignField": false
+            }
+        ],
+        "Tables": [
+            {
+                "RowTypeName": "ItemData",
+                "FieldName": "ItemDatas",
+                "Fields": [
+                    {
+                        "TypeName": "int",
+                        "Name": "Id",
+                        "IsDesignField": false
+                    },
+                    {
+                        "TypeName": "float",
+                        "Name": "Weight",
+                        "IsDesignField": false
+                    },
+                    {
+                        "TypeName": "Vector2",
+                        "Name": "Position",
+                        "IsDesignField": false
+                    }
+                ]
+            }
+        ]
+    },
+    "Sheets": [
+        {
+            "ArrayFieldName": "ItemDatas",
+            "Formulas": [],
+            "Cells": []
+        }
+    ]
+}

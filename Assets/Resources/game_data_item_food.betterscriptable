@@ -1,0 +1,49 @@
+{
+    "Version": 1,
+    "AssetGuid": "755d102b802db41ddb96f25cfc9846a8",
+    "AssetPath": "Assets/Resources/game_data_item_food.asset",
+    "AssetTypeName": "BetterScriptable.Generated.ItemDataAsset, Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "SerializedAssetJson": "{\n    \"MonoBehaviour\": {\n        \"m_Enabled\": true,\n        \"m_EditorHideFlags\": 0,\n        \"m_Name\": \"game_data_item\",\n        \"m_EditorClassIdentifier\": \"Assembly-CSharp::BetterScriptable.Generated.ItemDataAsset\",\n        \"_itemType\": \"\",\n        \"_itemDatas\": []\n    }\n}",
+    "Schema": {
+        "AssetClassName": "ItemDataAsset",
+        "NamespaceName": "BetterScriptable.Generated",
+        "MenuPath": "BetterScriptable/game_data_item",
+        "Fields": [
+            {
+                "TypeName": "string",
+                "Name": "ItemCategory",
+                "IsDesignField": false
+            }
+        ],
+        "Tables": [
+            {
+                "RowTypeName": "ItemData",
+                "FieldName": "ItemDatas",
+                "Fields": [
+                    {
+                        "TypeName": "int",
+                        "Name": "Id",
+                        "IsDesignField": false
+                    },
+                    {
+                        "TypeName": "float",
+                        "Name": "Weight",
+                        "IsDesignField": false
+                    },
+                    {
+                        "TypeName": "Vector2",
+                        "Name": "Position",
+                        "IsDesignField": false
+                    }
+                ]
+            }
+        ]
+    },
+    "Sheets": [
+        {
+            "ArrayFieldName": "ItemDatas",
+            "Formulas": [],
+            "Cells": []
+        }
+    ]
+}
