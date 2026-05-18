@@ -15,233 +15,233 @@ MonoBehaviour:
   _characterType: Cookie
   _characterDatas:
   - _id: 1
-    _weight: 10
+    _weight: 18
     _thumbnailResourceKey: cookie0001_thumbnail
     _spineResourceKey: cookie0001_skeletonData
     _resourceOffset: {x: 0, y: 0, z: 0}
-    _runSpeed: 0
-    _actionCooldown: 0
-    _attackCooldown: 0
-    _healthPoint: 0
-    _attackPoint: 0
+    _runSpeed: 3.2
+    _actionCooldown: 0.8
+    _attackCooldown: 1.2
+    _healthPoint: 120
+    _attackPoint: 18
   - _id: 2
-    _weight: 0
+    _weight: 14
     _thumbnailResourceKey: cookie0002_thumbnail
     _spineResourceKey: cookie0002_skeletonData
-    _resourceOffset: {x: 0, y: 0, z: 0}
-    _runSpeed: 0
-    _actionCooldown: 0
-    _attackCooldown: 0
-    _healthPoint: 0
-    _attackPoint: 0
+    _resourceOffset: {x: 0.01, y: 0.02, z: 0}
+    _runSpeed: 3
+    _actionCooldown: 0.9
+    _attackCooldown: 1.3
+    _healthPoint: 135
+    _attackPoint: 20
   - _id: 3
-    _weight: 0
+    _weight: 8
     _thumbnailResourceKey: cookie0003_thumbnail
     _spineResourceKey: cookie0003_skeletonData
-    _resourceOffset: {x: 0, y: 0, z: 0}
-    _runSpeed: 0
-    _actionCooldown: 0
-    _attackCooldown: 0
-    _healthPoint: 0
-    _attackPoint: 0
+    _resourceOffset: {x: -0.02, y: 0.04, z: 0}
+    _runSpeed: 2.7
+    _actionCooldown: 1.1
+    _attackCooldown: 1.6
+    _healthPoint: 95
+    _attackPoint: 34
   - _id: 4
-    _weight: 0
+    _weight: 9
     _thumbnailResourceKey: cookie0004_thumbnail
     _spineResourceKey: cookie0004_skeletonData
-    _resourceOffset: {x: 0, y: 0, z: 0}
-    _runSpeed: 0
-    _actionCooldown: 0
-    _attackCooldown: 0
-    _healthPoint: 0
-    _attackPoint: 0
+    _resourceOffset: {x: 0.02, y: 0.01, z: 0}
+    _runSpeed: 4.1
+    _actionCooldown: 0.65
+    _attackCooldown: 0.95
+    _healthPoint: 100
+    _attackPoint: 16
   - _id: 5
-    _weight: 0
+    _weight: 7
     _thumbnailResourceKey: cookie0005_thumbnail
     _spineResourceKey: cookie0005_skeletonData
-    _resourceOffset: {x: 0, y: 0, z: 0}
-    _runSpeed: 0
-    _actionCooldown: 0
-    _attackCooldown: 0
-    _healthPoint: 0
-    _attackPoint: 0
+    _resourceOffset: {x: 0, y: 0.03, z: 0}
+    _runSpeed: 2.9
+    _actionCooldown: 1
+    _attackCooldown: 1.4
+    _healthPoint: 110
+    _attackPoint: 12
   - _id: 6
-    _weight: 0
+    _weight: 10
     _thumbnailResourceKey: cookie0006_thumbnail
     _spineResourceKey: cookie0006_skeletonData
-    _resourceOffset: {x: 0, y: 0, z: 0}
-    _runSpeed: 0
-    _actionCooldown: 0
-    _attackCooldown: 0
-    _healthPoint: 0
-    _attackPoint: 0
+    _resourceOffset: {x: -0.01, y: 0.05, z: 0}
+    _runSpeed: 2.6
+    _actionCooldown: 1.05
+    _attackCooldown: 1.55
+    _healthPoint: 170
+    _attackPoint: 22
   - _id: 7
-    _weight: 0
+    _weight: 6
     _thumbnailResourceKey: cookie0007_thumbnail
     _spineResourceKey: cookie0007_skeletonData
-    _resourceOffset: {x: 0, y: 0, z: 0}
-    _runSpeed: 0
-    _actionCooldown: 0
-    _attackCooldown: 0
-    _healthPoint: 0
-    _attackPoint: 0
+    _resourceOffset: {x: 0.01, y: 0.06, z: 0}
+    _runSpeed: 2.8
+    _actionCooldown: 0.95
+    _attackCooldown: 1.35
+    _healthPoint: 210
+    _attackPoint: 28
   - _id: 8
-    _weight: 0
+    _weight: 8
     _thumbnailResourceKey: cookie0008_thumbnail
     _spineResourceKey: cookie0008_skeletonData
-    _resourceOffset: {x: 0, y: 0, z: 0}
-    _runSpeed: 0
-    _actionCooldown: 0
-    _attackCooldown: 0
-    _healthPoint: 0
-    _attackPoint: 0
+    _resourceOffset: {x: 0.03, y: 0.02, z: 0}
+    _runSpeed: 3.4
+    _actionCooldown: 0.75
+    _attackCooldown: 1.1
+    _healthPoint: 115
+    _attackPoint: 30
   - _id: 9
-    _weight: 0
+    _weight: 5
     _thumbnailResourceKey: cookie0009_thumbnail
     _spineResourceKey: cookie0009_skeletonData
-    _resourceOffset: {x: 0, y: 0, z: 0}
-    _runSpeed: 0
-    _actionCooldown: 0
-    _attackCooldown: 0
-    _healthPoint: 0
-    _attackPoint: 0
+    _resourceOffset: {x: 0, y: 0.08, z: 0}
+    _runSpeed: 3.8
+    _actionCooldown: 0.7
+    _attackCooldown: 1.05
+    _healthPoint: 105
+    _attackPoint: 24
   - _id: 10
-    _weight: 0
+    _weight: 5
     _thumbnailResourceKey: cookie0010_thumbnail
     _spineResourceKey: cookie0010_skeletonData
-    _resourceOffset: {x: 0, y: 0, z: 0}
-    _runSpeed: 0
-    _actionCooldown: 0
-    _attackCooldown: 0
-    _healthPoint: 0
-    _attackPoint: 0
+    _resourceOffset: {x: -0.02, y: 0.03, z: 0}
+    _runSpeed: 2.9
+    _actionCooldown: 1.2
+    _attackCooldown: 1.7
+    _healthPoint: 90
+    _attackPoint: 42
   - _id: 11
-    _weight: 0
+    _weight: 6
     _thumbnailResourceKey: cookie0011_thumbnail
     _spineResourceKey: cookie0011_skeletonData
-    _resourceOffset: {x: 0, y: 0, z: 0}
-    _runSpeed: 0
-    _actionCooldown: 0
-    _attackCooldown: 0
-    _healthPoint: 0
-    _attackPoint: 0
+    _resourceOffset: {x: 0.01, y: 0.02, z: 0}
+    _runSpeed: 3.1
+    _actionCooldown: 0.85
+    _attackCooldown: 1.25
+    _healthPoint: 125
+    _attackPoint: 19
   - _id: 12
-    _weight: 0
+    _weight: 6
     _thumbnailResourceKey: cookie0012_thumbnail
     _spineResourceKey: cookie0012_skeletonData
-    _resourceOffset: {x: 0, y: 0, z: 0}
-    _runSpeed: 0
-    _actionCooldown: 0
-    _attackCooldown: 0
-    _healthPoint: 0
-    _attackPoint: 0
+    _resourceOffset: {x: 0, y: 0.04, z: 0}
+    _runSpeed: 3
+    _actionCooldown: 1.05
+    _attackCooldown: 1.45
+    _healthPoint: 130
+    _attackPoint: 26
   - _id: 13
-    _weight: 0
+    _weight: 4
     _thumbnailResourceKey: cookie0013_thumbnail
     _spineResourceKey: cookie0013_skeletonData
-    _resourceOffset: {x: 0, y: 0, z: 0}
-    _runSpeed: 0
-    _actionCooldown: 0
-    _attackCooldown: 0
-    _healthPoint: 0
-    _attackPoint: 0
+    _resourceOffset: {x: 0.02, y: 0.05, z: 0}
+    _runSpeed: 2.8
+    _actionCooldown: 1
+    _attackCooldown: 1.5
+    _healthPoint: 160
+    _attackPoint: 27
   - _id: 14
-    _weight: 0
+    _weight: 7
     _thumbnailResourceKey: cookie0014_thumbnail
     _spineResourceKey: cookie0014_skeletonData
-    _resourceOffset: {x: 0, y: 0, z: 0}
-    _runSpeed: 0
-    _actionCooldown: 0
-    _attackCooldown: 0
-    _healthPoint: 0
-    _attackPoint: 0
+    _resourceOffset: {x: -0.01, y: 0.02, z: 0}
+    _runSpeed: 3.7
+    _actionCooldown: 0.7
+    _attackCooldown: 1
+    _healthPoint: 115
+    _attackPoint: 36
   - _id: 15
-    _weight: 0
+    _weight: 4
     _thumbnailResourceKey: cookie0015_thumbnail
     _spineResourceKey: cookie0015_skeletonData
-    _resourceOffset: {x: 0, y: 0, z: 0}
-    _runSpeed: 0
-    _actionCooldown: 0
-    _attackCooldown: 0
-    _healthPoint: 0
-    _attackPoint: 0
+    _resourceOffset: {x: 0, y: 0.03, z: 0}
+    _runSpeed: 2.7
+    _actionCooldown: 1.15
+    _attackCooldown: 1.8
+    _healthPoint: 105
+    _attackPoint: 14
   - _id: 16
-    _weight: 0
+    _weight: 3
     _thumbnailResourceKey: cookie0016_thumbnail
     _spineResourceKey: cookie0016_skeletonData
-    _resourceOffset: {x: 0, y: 0, z: 0}
-    _runSpeed: 0
-    _actionCooldown: 0
-    _attackCooldown: 0
-    _healthPoint: 0
-    _attackPoint: 0
+    _resourceOffset: {x: 0.02, y: 0.01, z: 0}
+    _runSpeed: 4
+    _actionCooldown: 0.65
+    _attackCooldown: 0.9
+    _healthPoint: 98
+    _attackPoint: 44
   - _id: 17
-    _weight: 0
+    _weight: 5
     _thumbnailResourceKey: cookie0017_thumbnail
     _spineResourceKey: cookie0017_skeletonData
-    _resourceOffset: {x: 0, y: 0, z: 0}
-    _runSpeed: 0
-    _actionCooldown: 0
-    _attackCooldown: 0
-    _healthPoint: 0
-    _attackPoint: 0
+    _resourceOffset: {x: -0.03, y: 0.02, z: 0}
+    _runSpeed: 3.3
+    _actionCooldown: 0.85
+    _attackCooldown: 1.2
+    _healthPoint: 118
+    _attackPoint: 38
   - _id: 18
-    _weight: 0
+    _weight: 5
     _thumbnailResourceKey: cookie0018_thumbnail
     _spineResourceKey: cookie0018_skeletonData
-    _resourceOffset: {x: 0, y: 0, z: 0}
-    _runSpeed: 0
-    _actionCooldown: 0
-    _attackCooldown: 0
-    _healthPoint: 0
-    _attackPoint: 0
+    _resourceOffset: {x: 0.01, y: 0.04, z: 0}
+    _runSpeed: 3.5
+    _actionCooldown: 0.8
+    _attackCooldown: 1.15
+    _healthPoint: 122
+    _attackPoint: 29
   - _id: 19
-    _weight: 0
+    _weight: 2
     _thumbnailResourceKey: cookie0019_thumbnail
     _spineResourceKey: cookie0019_skeletonData
-    _resourceOffset: {x: 0, y: 0, z: 0}
-    _runSpeed: 0
-    _actionCooldown: 0
-    _attackCooldown: 0
-    _healthPoint: 0
-    _attackPoint: 0
+    _resourceOffset: {x: 0, y: 0.09, z: 0}
+    _runSpeed: 3.2
+    _actionCooldown: 1.25
+    _attackCooldown: 1.9
+    _healthPoint: 140
+    _attackPoint: 52
   - _id: 20
-    _weight: 0
+    _weight: 3
     _thumbnailResourceKey: cookie0020_thumbnail
     _spineResourceKey: cookie0020_skeletonData
-    _resourceOffset: {x: 0, y: 0, z: 0}
-    _runSpeed: 0
-    _actionCooldown: 0
-    _attackCooldown: 0
-    _healthPoint: 0
-    _attackPoint: 0
+    _resourceOffset: {x: -0.01, y: 0.07, z: 0}
+    _runSpeed: 2.8
+    _actionCooldown: 1.2
+    _attackCooldown: 1.85
+    _healthPoint: 150
+    _attackPoint: 48
   - _id: 21
-    _weight: 0
+    _weight: 3
     _thumbnailResourceKey: cookie0021_thumbnail
     _spineResourceKey: cookie0021_skeletonData
-    _resourceOffset: {x: 0, y: 0, z: 0}
-    _runSpeed: 0
-    _actionCooldown: 0
-    _attackCooldown: 0
-    _healthPoint: 0
-    _attackPoint: 0
+    _resourceOffset: {x: 0.01, y: 0.03, z: 0}
+    _runSpeed: 3
+    _actionCooldown: 1.1
+    _attackCooldown: 1.65
+    _healthPoint: 112
+    _attackPoint: 50
   - _id: 22
-    _weight: 0
+    _weight: 4
     _thumbnailResourceKey: cookie0022_thumbnail
     _spineResourceKey: cookie0022_skeletonData
-    _resourceOffset: {x: 0, y: 0, z: 0}
-    _runSpeed: 0
-    _actionCooldown: 0
-    _attackCooldown: 0
-    _healthPoint: 0
-    _attackPoint: 0
+    _resourceOffset: {x: 0.02, y: 0.04, z: 0}
+    _runSpeed: 3.1
+    _actionCooldown: 0.9
+    _attackCooldown: 1.35
+    _healthPoint: 145
+    _attackPoint: 33
   - _id: 23
-    _weight: 0
+    _weight: 2
     _thumbnailResourceKey: cookie0023_thumbnail
     _spineResourceKey: cookie0023_skeletonData
-    _resourceOffset: {x: 0, y: 0, z: 0}
-    _runSpeed: 0
-    _actionCooldown: 0
-    _attackCooldown: 0
-    _healthPoint: 0
-    _attackPoint: 0
+    _resourceOffset: {x: 0, y: 0.1, z: 0}
+    _runSpeed: 2.9
+    _actionCooldown: 1.3
+    _attackCooldown: 2
+    _healthPoint: 180
+    _attackPoint: 46
   _skillDatas: []

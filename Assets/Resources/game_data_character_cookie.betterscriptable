@@ -3,7 +3,7 @@
     "AssetGuid": "ee4bda776b67b42ccb94f8b78b7fa575",
     "AssetPath": "Assets/Resources/game_data_character_cookie.asset",
     "AssetTypeName": "BetterScriptable.Generated.CharacterDataAsset, Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
-    "SerializedAssetJson": "{\n    \"MonoBehaviour\": {\n        \"m_Enabled\": true,\n        \"m_EditorHideFlags\": 0,\n        \"m_Name\": \"game_data_character_cookie\",\n        \"m_EditorClassIdentifier\": \"Assembly-CSharp::BetterScriptable.Generated.CharacterDataAsset\",\n        \"_characterType\": \"Cookie\",\n        \"_characterDatas\": [\n            {\n                \"_id\": 1,\n                \"_weight\": 10.0,\n                \"_thumbnailResourceKey\": \"cookie0001_thumbnail\",\n                \"_spineResourceKey\": \"cookie0001_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.0,\n                    \"y\": 0.0,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 0.0,\n                \"_actionCooldown\": 0.0,\n                \"_attackCooldown\": 0.0,\n                \"_healthPoint\": 0.0,\n                \"_attackPoint\": 0.0\n            },\n            {\n                \"_id\": 2,\n                \"_weight\": 0.0,\n                \"_thumbnailResourceKey\": \"cookie0002_thumbnail\",\n                \"_spineResourceKey\": \"cookie0002_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.0,\n                    \"y\": 0.0,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 0.0,\n                \"_actionCooldown\": 0.0,\n                \"_attackCooldown\": 0.0,\n                \"_healthPoint\": 0.0,\n                \"_attackPoint\": 0.0\n            },\n            {\n                \"_id\": 3,\n                \"_weight\": 0.0,\n                \"_thumbnailResourceKey\": \"cookie0003_thumbnail\",\n                \"_spineResourceKey\": \"cookie0003_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.0,\n                    \"y\": 0.0,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 0.0,\n                \"_actionCooldown\": 0.0,\n                \"_attackCooldown\": 0.0,\n                \"_healthPoint\": 0.0,\n                \"_attackPoint\": 0.0\n            },\n            {\n                \"_id\": 4,\n                \"_weight\": 0.0,\n                \"_thumbnailResourceKey\": \"cookie0004_thumbnail\",\n                \"_spineResourceKey\": \"cookie0004_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.0,\n                    \"y\": 0.0,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 0.0,\n                \"_actionCooldown\": 0.0,\n                \"_attackCooldown\": 0.0,\n                \"_healthPoint\": 0.0,\n                \"_attackPoint\": 0.0\n            },\n            {\n                \"_id\": 5,\n                \"_weight\": 0.0,\n                \"_thumbnailResourceKey\": \"cookie0005_thumbnail\",\n                \"_spineResourceKey\": \"cookie0005_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.0,\n                    \"y\": 0.0,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 0.0,\n                \"_actionCooldown\": 0.0,\n                \"_attackCooldown\": 0.0,\n                \"_healthPoint\": 0.0,\n                \"_attackPoint\": 0.0\n            },\n            {\n                \"_id\": 6,\n                \"_weight\": 0.0,\n                \"_thumbnailResourceKey\": \"cookie0006_thumbnail\",\n                \"_spineResourceKey\": \"cookie0006_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.0,\n                    \"y\": 0.0,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 0.0,\n                \"_actionCooldown\": 0.0,\n                \"_attackCooldown\": 0.0,\n                \"_healthPoint\": 0.0,\n                \"_attackPoint\": 0.0\n            },\n            {\n                \"_id\": 7,\n                \"_weight\": 0.0,\n                \"_thumbnailResourceKey\": \"cookie0007_thumbnail\",\n                \"_spineResourceKey\": \"cookie0007_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.0,\n                    \"y\": 0.0,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 0.0,\n                \"_actionCooldown\": 0.0,\n                \"_attackCooldown\": 0.0,\n                \"_healthPoint\": 0.0,\n                \"_attackPoint\": 0.0\n            },\n            {\n                \"_id\": 8,\n                \"_weight\": 0.0,\n                \"_thumbnailResourceKey\": \"cookie0008_thumbnail\",\n                \"_spineResourceKey\": \"cookie0008_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.0,\n                    \"y\": 0.0,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 0.0,\n                \"_actionCooldown\": 0.0,\n                \"_attackCooldown\": 0.0,\n                \"_healthPoint\": 0.0,\n                \"_attackPoint\": 0.0\n            },\n            {\n                \"_id\": 9,\n                \"_weight\": 0.0,\n                \"_thumbnailResourceKey\": \"cookie0009_thumbnail\",\n                \"_spineResourceKey\": \"cookie0009_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.0,\n                    \"y\": 0.0,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 0.0,\n                \"_actionCooldown\": 0.0,\n                \"_attackCooldown\": 0.0,\n                \"_healthPoint\": 0.0,\n                \"_attackPoint\": 0.0\n            },\n            {\n                \"_id\": 10,\n                \"_weight\": 0.0,\n                \"_thumbnailResourceKey\": \"cookie0010_thumbnail\",\n                \"_spineResourceKey\": \"cookie0010_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.0,\n                    \"y\": 0.0,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 0.0,\n                \"_actionCooldown\": 0.0,\n                \"_attackCooldown\": 0.0,\n                \"_healthPoint\": 0.0,\n                \"_attackPoint\": 0.0\n            },\n            {\n                \"_id\": 11,\n                \"_weight\": 0.0,\n                \"_thumbnailResourceKey\": \"cookie0011_thumbnail\",\n                \"_spineResourceKey\": \"cookie0011_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.0,\n                    \"y\": 0.0,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 0.0,\n                \"_actionCooldown\": 0.0,\n                \"_attackCooldown\": 0.0,\n                \"_healthPoint\": 0.0,\n                \"_attackPoint\": 0.0\n            },\n            {\n                \"_id\": 12,\n                \"_weight\": 0.0,\n                \"_thumbnailResourceKey\": \"cookie0012_thumbnail\",\n                \"_spineResourceKey\": \"cookie0012_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.0,\n                    \"y\": 0.0,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 0.0,\n                \"_actionCooldown\": 0.0,\n                \"_attackCooldown\": 0.0,\n                \"_healthPoint\": 0.0,\n                \"_attackPoint\": 0.0\n            },\n            {\n                \"_id\": 13,\n                \"_weight\": 0.0,\n                \"_thumbnailResourceKey\": \"cookie0013_thumbnail\",\n                \"_spineResourceKey\": \"cookie0013_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.0,\n                    \"y\": 0.0,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 0.0,\n                \"_actionCooldown\": 0.0,\n                \"_attackCooldown\": 0.0,\n                \"_healthPoint\": 0.0,\n                \"_attackPoint\": 0.0\n            },\n            {\n                \"_id\": 14,\n                \"_weight\": 0.0,\n                \"_thumbnailResourceKey\": \"cookie0014_thumbnail\",\n                \"_spineResourceKey\": \"cookie0014_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.0,\n                    \"y\": 0.0,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 0.0,\n                \"_actionCooldown\": 0.0,\n                \"_attackCooldown\": 0.0,\n                \"_healthPoint\": 0.0,\n                \"_attackPoint\": 0.0\n            },\n            {\n                \"_id\": 15,\n                \"_weight\": 0.0,\n                \"_thumbnailResourceKey\": \"cookie0015_thumbnail\",\n                \"_spineResourceKey\": \"cookie0015_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.0,\n                    \"y\": 0.0,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 0.0,\n                \"_actionCooldown\": 0.0,\n                \"_attackCooldown\": 0.0,\n                \"_healthPoint\": 0.0,\n                \"_attackPoint\": 0.0\n            },\n            {\n                \"_id\": 16,\n                \"_weight\": 0.0,\n                \"_thumbnailResourceKey\": \"cookie0016_thumbnail\",\n                \"_spineResourceKey\": \"cookie0016_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.0,\n                    \"y\": 0.0,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 0.0,\n                \"_actionCooldown\": 0.0,\n                \"_attackCooldown\": 0.0,\n                \"_healthPoint\": 0.0,\n                \"_attackPoint\": 0.0\n            },\n            {\n                \"_id\": 17,\n                \"_weight\": 0.0,\n                \"_thumbnailResourceKey\": \"cookie0017_thumbnail\",\n                \"_spineResourceKey\": \"cookie0017_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.0,\n                    \"y\": 0.0,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 0.0,\n                \"_actionCooldown\": 0.0,\n                \"_attackCooldown\": 0.0,\n                \"_healthPoint\": 0.0,\n                \"_attackPoint\": 0.0\n            },\n            {\n                \"_id\": 18,\n                \"_weight\": 0.0,\n                \"_thumbnailResourceKey\": \"cookie0018_thumbnail\",\n                \"_spineResourceKey\": \"cookie0018_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.0,\n                    \"y\": 0.0,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 0.0,\n                \"_actionCooldown\": 0.0,\n                \"_attackCooldown\": 0.0,\n                \"_healthPoint\": 0.0,\n                \"_attackPoint\": 0.0\n            },\n            {\n                \"_id\": 19,\n                \"_weight\": 0.0,\n                \"_thumbnailResourceKey\": \"cookie0019_thumbnail\",\n                \"_spineResourceKey\": \"cookie0019_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.0,\n                    \"y\": 0.0,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 0.0,\n                \"_actionCooldown\": 0.0,\n                \"_attackCooldown\": 0.0,\n                \"_healthPoint\": 0.0,\n                \"_attackPoint\": 0.0\n            },\n            {\n                \"_id\": 20,\n                \"_weight\": 0.0,\n                \"_thumbnailResourceKey\": \"cookie0020_thumbnail\",\n                \"_spineResourceKey\": \"cookie0020_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.0,\n                    \"y\": 0.0,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 0.0,\n                \"_actionCooldown\": 0.0,\n                \"_attackCooldown\": 0.0,\n                \"_healthPoint\": 0.0,\n                \"_attackPoint\": 0.0\n            },\n            {\n                \"_id\": 21,\n                \"_weight\": 0.0,\n                \"_thumbnailResourceKey\": \"cookie0021_thumbnail\",\n                \"_spineResourceKey\": \"cookie0021_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.0,\n                    \"y\": 0.0,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 0.0,\n                \"_actionCooldown\": 0.0,\n                \"_attackCooldown\": 0.0,\n                \"_healthPoint\": 0.0,\n                \"_attackPoint\": 0.0\n            },\n            {\n                \"_id\": 22,\n                \"_weight\": 0.0,\n                \"_thumbnailResourceKey\": \"cookie0022_thumbnail\",\n                \"_spineResourceKey\": \"cookie0022_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.0,\n                    \"y\": 0.0,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 0.0,\n                \"_actionCooldown\": 0.0,\n                \"_attackCooldown\": 0.0,\n                \"_healthPoint\": 0.0,\n                \"_attackPoint\": 0.0\n            },\n            {\n                \"_id\": 23,\n                \"_weight\": 0.0,\n                \"_thumbnailResourceKey\": \"cookie0023_thumbnail\",\n                \"_spineResourceKey\": \"cookie0023_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.0,\n                    \"y\": 0.0,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 0.0,\n                \"_actionCooldown\": 0.0,\n                \"_attackCooldown\": 0.0,\n                \"_healthPoint\": 0.0,\n                \"_attackPoint\": 0.0\n            }\n        ],\n        \"_skillDatas\": []\n    }\n}",
+    "SerializedAssetJson": "{\n    \"MonoBehaviour\": {\n        \"m_Enabled\": true,\n        \"m_EditorHideFlags\": 0,\n        \"m_Name\": \"game_data_character_cookie\",\n        \"m_EditorClassIdentifier\": \"Assembly-CSharp::BetterScriptable.Generated.CharacterDataAsset\",\n        \"_characterType\": \"Cookie\",\n        \"_characterDatas\": [\n            {\n                \"_id\": 1,\n                \"_weight\": 18.0,\n                \"_thumbnailResourceKey\": \"cookie0001_thumbnail\",\n                \"_spineResourceKey\": \"cookie0001_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.0,\n                    \"y\": 0.0,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 3.200000047683716,\n                \"_actionCooldown\": 0.800000011920929,\n                \"_attackCooldown\": 1.2000000476837159,\n                \"_healthPoint\": 120.0,\n                \"_attackPoint\": 18.0\n            },\n            {\n                \"_id\": 2,\n                \"_weight\": 14.0,\n                \"_thumbnailResourceKey\": \"cookie0002_thumbnail\",\n                \"_spineResourceKey\": \"cookie0002_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.009999999776482582,\n                    \"y\": 0.019999999552965165,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 3.0,\n                \"_actionCooldown\": 0.8999999761581421,\n                \"_attackCooldown\": 1.2999999523162842,\n                \"_healthPoint\": 135.0,\n                \"_attackPoint\": 20.0\n            },\n            {\n                \"_id\": 3,\n                \"_weight\": 8.0,\n                \"_thumbnailResourceKey\": \"cookie0003_thumbnail\",\n                \"_spineResourceKey\": \"cookie0003_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": -0.019999999552965165,\n                    \"y\": 0.03999999910593033,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 2.700000047683716,\n                \"_actionCooldown\": 1.100000023841858,\n                \"_attackCooldown\": 1.600000023841858,\n                \"_healthPoint\": 95.0,\n                \"_attackPoint\": 34.0\n            },\n            {\n                \"_id\": 4,\n                \"_weight\": 9.0,\n                \"_thumbnailResourceKey\": \"cookie0004_thumbnail\",\n                \"_spineResourceKey\": \"cookie0004_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.019999999552965165,\n                    \"y\": 0.009999999776482582,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 4.099999904632568,\n                \"_actionCooldown\": 0.6499999761581421,\n                \"_attackCooldown\": 0.949999988079071,\n                \"_healthPoint\": 100.0,\n                \"_attackPoint\": 16.0\n            },\n            {\n                \"_id\": 5,\n                \"_weight\": 7.0,\n                \"_thumbnailResourceKey\": \"cookie0005_thumbnail\",\n                \"_spineResourceKey\": \"cookie0005_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.0,\n                    \"y\": 0.029999999329447748,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 2.9000000953674318,\n                \"_actionCooldown\": 1.0,\n                \"_attackCooldown\": 1.399999976158142,\n                \"_healthPoint\": 110.0,\n                \"_attackPoint\": 12.0\n            },\n            {\n                \"_id\": 6,\n                \"_weight\": 10.0,\n                \"_thumbnailResourceKey\": \"cookie0006_thumbnail\",\n                \"_spineResourceKey\": \"cookie0006_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": -0.009999999776482582,\n                    \"y\": 0.05000000074505806,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 2.5999999046325685,\n                \"_actionCooldown\": 1.0499999523162842,\n                \"_attackCooldown\": 1.5499999523162842,\n                \"_healthPoint\": 170.0,\n                \"_attackPoint\": 22.0\n            },\n            {\n                \"_id\": 7,\n                \"_weight\": 6.0,\n                \"_thumbnailResourceKey\": \"cookie0007_thumbnail\",\n                \"_spineResourceKey\": \"cookie0007_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.009999999776482582,\n                    \"y\": 0.05999999865889549,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 2.799999952316284,\n                \"_actionCooldown\": 0.949999988079071,\n                \"_attackCooldown\": 1.350000023841858,\n                \"_healthPoint\": 210.0,\n                \"_attackPoint\": 28.0\n            },\n            {\n                \"_id\": 8,\n                \"_weight\": 8.0,\n                \"_thumbnailResourceKey\": \"cookie0008_thumbnail\",\n                \"_spineResourceKey\": \"cookie0008_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.029999999329447748,\n                    \"y\": 0.019999999552965165,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 3.4000000953674318,\n                \"_actionCooldown\": 0.75,\n                \"_attackCooldown\": 1.100000023841858,\n                \"_healthPoint\": 115.0,\n                \"_attackPoint\": 30.0\n            },\n            {\n                \"_id\": 9,\n                \"_weight\": 5.0,\n                \"_thumbnailResourceKey\": \"cookie0009_thumbnail\",\n                \"_spineResourceKey\": \"cookie0009_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.0,\n                    \"y\": 0.07999999821186066,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 3.799999952316284,\n                \"_actionCooldown\": 0.699999988079071,\n                \"_attackCooldown\": 1.0499999523162842,\n                \"_healthPoint\": 105.0,\n                \"_attackPoint\": 24.0\n            },\n            {\n                \"_id\": 10,\n                \"_weight\": 5.0,\n                \"_thumbnailResourceKey\": \"cookie0010_thumbnail\",\n                \"_spineResourceKey\": \"cookie0010_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": -0.019999999552965165,\n                    \"y\": 0.029999999329447748,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 2.9000000953674318,\n                \"_actionCooldown\": 1.2000000476837159,\n                \"_attackCooldown\": 1.7000000476837159,\n                \"_healthPoint\": 90.0,\n                \"_attackPoint\": 42.0\n            },\n            {\n                \"_id\": 11,\n                \"_weight\": 6.0,\n                \"_thumbnailResourceKey\": \"cookie0011_thumbnail\",\n                \"_spineResourceKey\": \"cookie0011_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.009999999776482582,\n                    \"y\": 0.019999999552965165,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 3.0999999046325685,\n                \"_actionCooldown\": 0.8500000238418579,\n                \"_attackCooldown\": 1.25,\n                \"_healthPoint\": 125.0,\n                \"_attackPoint\": 19.0\n            },\n            {\n                \"_id\": 12,\n                \"_weight\": 6.0,\n                \"_thumbnailResourceKey\": \"cookie0012_thumbnail\",\n                \"_spineResourceKey\": \"cookie0012_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.0,\n                    \"y\": 0.03999999910593033,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 3.0,\n                \"_actionCooldown\": 1.0499999523162842,\n                \"_attackCooldown\": 1.4500000476837159,\n                \"_healthPoint\": 130.0,\n                \"_attackPoint\": 26.0\n            },\n            {\n                \"_id\": 13,\n                \"_weight\": 4.0,\n                \"_thumbnailResourceKey\": \"cookie0013_thumbnail\",\n                \"_spineResourceKey\": \"cookie0013_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.019999999552965165,\n                    \"y\": 0.05000000074505806,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 2.799999952316284,\n                \"_actionCooldown\": 1.0,\n                \"_attackCooldown\": 1.5,\n                \"_healthPoint\": 160.0,\n                \"_attackPoint\": 27.0\n            },\n            {\n                \"_id\": 14,\n                \"_weight\": 7.0,\n                \"_thumbnailResourceKey\": \"cookie0014_thumbnail\",\n                \"_spineResourceKey\": \"cookie0014_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": -0.009999999776482582,\n                    \"y\": 0.019999999552965165,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 3.700000047683716,\n                \"_actionCooldown\": 0.699999988079071,\n                \"_attackCooldown\": 1.0,\n                \"_healthPoint\": 115.0,\n                \"_attackPoint\": 36.0\n            },\n            {\n                \"_id\": 15,\n                \"_weight\": 4.0,\n                \"_thumbnailResourceKey\": \"cookie0015_thumbnail\",\n                \"_spineResourceKey\": \"cookie0015_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.0,\n                    \"y\": 0.029999999329447748,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 2.700000047683716,\n                \"_actionCooldown\": 1.149999976158142,\n                \"_attackCooldown\": 1.7999999523162842,\n                \"_healthPoint\": 105.0,\n                \"_attackPoint\": 14.0\n            },\n            {\n                \"_id\": 16,\n                \"_weight\": 3.0,\n                \"_thumbnailResourceKey\": \"cookie0016_thumbnail\",\n                \"_spineResourceKey\": \"cookie0016_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.019999999552965165,\n                    \"y\": 0.009999999776482582,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 4.0,\n                \"_actionCooldown\": 0.6499999761581421,\n                \"_attackCooldown\": 0.8999999761581421,\n                \"_healthPoint\": 98.0,\n                \"_attackPoint\": 44.0\n            },\n            {\n                \"_id\": 17,\n                \"_weight\": 5.0,\n                \"_thumbnailResourceKey\": \"cookie0017_thumbnail\",\n                \"_spineResourceKey\": \"cookie0017_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": -0.029999999329447748,\n                    \"y\": 0.019999999552965165,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 3.299999952316284,\n                \"_actionCooldown\": 0.8500000238418579,\n                \"_attackCooldown\": 1.2000000476837159,\n                \"_healthPoint\": 118.0,\n                \"_attackPoint\": 38.0\n            },\n            {\n                \"_id\": 18,\n                \"_weight\": 5.0,\n                \"_thumbnailResourceKey\": \"cookie0018_thumbnail\",\n                \"_spineResourceKey\": \"cookie0018_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.009999999776482582,\n                    \"y\": 0.03999999910593033,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 3.5,\n                \"_actionCooldown\": 0.800000011920929,\n                \"_attackCooldown\": 1.149999976158142,\n                \"_healthPoint\": 122.0,\n                \"_attackPoint\": 29.0\n            },\n            {\n                \"_id\": 19,\n                \"_weight\": 2.0,\n                \"_thumbnailResourceKey\": \"cookie0019_thumbnail\",\n                \"_spineResourceKey\": \"cookie0019_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.0,\n                    \"y\": 0.09000000357627869,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 3.200000047683716,\n                \"_actionCooldown\": 1.25,\n                \"_attackCooldown\": 1.899999976158142,\n                \"_healthPoint\": 140.0,\n                \"_attackPoint\": 52.0\n            },\n            {\n                \"_id\": 20,\n                \"_weight\": 3.0,\n                \"_thumbnailResourceKey\": \"cookie0020_thumbnail\",\n                \"_spineResourceKey\": \"cookie0020_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": -0.009999999776482582,\n                    \"y\": 0.07000000029802323,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 2.799999952316284,\n                \"_actionCooldown\": 1.2000000476837159,\n                \"_attackCooldown\": 1.850000023841858,\n                \"_healthPoint\": 150.0,\n                \"_attackPoint\": 48.0\n            },\n            {\n                \"_id\": 21,\n                \"_weight\": 3.0,\n                \"_thumbnailResourceKey\": \"cookie0021_thumbnail\",\n                \"_spineResourceKey\": \"cookie0021_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.009999999776482582,\n                    \"y\": 0.029999999329447748,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 3.0,\n                \"_actionCooldown\": 1.100000023841858,\n                \"_attackCooldown\": 1.649999976158142,\n                \"_healthPoint\": 112.0,\n                \"_attackPoint\": 50.0\n            },\n            {\n                \"_id\": 22,\n                \"_weight\": 4.0,\n                \"_thumbnailResourceKey\": \"cookie0022_thumbnail\",\n                \"_spineResourceKey\": \"cookie0022_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.019999999552965165,\n                    \"y\": 0.03999999910593033,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 3.0999999046325685,\n                \"_actionCooldown\": 0.8999999761581421,\n                \"_attackCooldown\": 1.350000023841858,\n                \"_healthPoint\": 145.0,\n                \"_attackPoint\": 33.0\n            },\n            {\n                \"_id\": 23,\n                \"_weight\": 2.0,\n                \"_thumbnailResourceKey\": \"cookie0023_thumbnail\",\n                \"_spineResourceKey\": \"cookie0023_skeletonData\",\n                \"_resourceOffset\": {\n                    \"x\": 0.0,\n                    \"y\": 0.10000000149011612,\n                    \"z\": 0.0\n                },\n                \"_runSpeed\": 2.9000000953674318,\n                \"_actionCooldown\": 1.2999999523162842,\n                \"_attackCooldown\": 2.0,\n                \"_healthPoint\": 180.0,\n                \"_attackPoint\": 46.0\n            }\n        ],\n        \"_skillDatas\": []\n    }\n}",
     "Schema": {
         "AssetClassName": "CharacterDataAsset",
         "NamespaceName": "BetterScriptable.Generated",
@@ -118,8 +118,22 @@
             "Cells": [
                 {
                     "Row": 0,
+                    "ColumnName": "Name",
+                    "Value": "Rookie Cookie",
+                    "Formula": "",
+                    "Note": ""
+                },
+                {
+                    "Row": 0,
                     "ColumnName": "ResourceName",
                     "Value": "cookie0001",
+                    "Formula": "",
+                    "Note": ""
+                },
+                {
+                    "Row": 1,
+                    "ColumnName": "Name",
+                    "Value": "Berry Cookie",
                     "Formula": "",
                     "Note": ""
                 },
@@ -132,8 +146,22 @@
                 },
                 {
                     "Row": 2,
+                    "ColumnName": "Name",
+                    "Value": "Sage Cookie",
+                    "Formula": "",
+                    "Note": ""
+                },
+                {
+                    "Row": 2,
                     "ColumnName": "ResourceName",
                     "Value": "cookie0003",
+                    "Formula": "",
+                    "Note": ""
+                },
+                {
+                    "Row": 3,
+                    "ColumnName": "Name",
+                    "Value": "Swift Cookie",
                     "Formula": "",
                     "Note": ""
                 },
@@ -146,8 +174,22 @@
                 },
                 {
                     "Row": 4,
+                    "ColumnName": "Name",
+                    "Value": "Meadow Cookie",
+                    "Formula": "",
+                    "Note": ""
+                },
+                {
+                    "Row": 4,
                     "ColumnName": "ResourceName",
                     "Value": "cookie0005",
+                    "Formula": "",
+                    "Note": ""
+                },
+                {
+                    "Row": 5,
+                    "ColumnName": "Name",
+                    "Value": "Cocoa Cookie",
                     "Formula": "",
                     "Note": ""
                 },
@@ -160,8 +202,22 @@
                 },
                 {
                     "Row": 6,
+                    "ColumnName": "Name",
+                    "Value": "Knight Cookie",
+                    "Formula": "",
+                    "Note": ""
+                },
+                {
+                    "Row": 6,
                     "ColumnName": "ResourceName",
                     "Value": "cookie0007",
+                    "Formula": "",
+                    "Note": ""
+                },
+                {
+                    "Row": 7,
+                    "ColumnName": "Name",
+                    "Value": "Ranger Cookie",
                     "Formula": "",
                     "Note": ""
                 },
@@ -174,8 +230,22 @@
                 },
                 {
                     "Row": 8,
+                    "ColumnName": "Name",
+                    "Value": "Pilot Cookie",
+                    "Formula": "",
+                    "Note": ""
+                },
+                {
+                    "Row": 8,
                     "ColumnName": "ResourceName",
                     "Value": "cookie0009",
+                    "Formula": "",
+                    "Note": ""
+                },
+                {
+                    "Row": 9,
+                    "ColumnName": "Name",
+                    "Value": "Alchemist Cookie",
                     "Formula": "",
                     "Note": ""
                 },
@@ -188,8 +258,22 @@
                 },
                 {
                     "Row": 10,
+                    "ColumnName": "Name",
+                    "Value": "Mint Cookie",
+                    "Formula": "",
+                    "Note": ""
+                },
+                {
+                    "Row": 10,
                     "ColumnName": "ResourceName",
                     "Value": "cookie0011",
+                    "Formula": "",
+                    "Note": ""
+                },
+                {
+                    "Row": 11,
+                    "ColumnName": "Name",
+                    "Value": "Snow Cookie",
                     "Formula": "",
                     "Note": ""
                 },
@@ -202,8 +286,22 @@
                 },
                 {
                     "Row": 12,
+                    "ColumnName": "Name",
+                    "Value": "Princess Cookie",
+                    "Formula": "",
+                    "Note": ""
+                },
+                {
+                    "Row": 12,
                     "ColumnName": "ResourceName",
                     "Value": "cookie0013",
+                    "Formula": "",
+                    "Note": ""
+                },
+                {
+                    "Row": 13,
+                    "ColumnName": "Name",
+                    "Value": "Chili Cookie",
                     "Formula": "",
                     "Note": ""
                 },
@@ -216,8 +314,22 @@
                 },
                 {
                     "Row": 14,
+                    "ColumnName": "Name",
+                    "Value": "Herb Cookie",
+                    "Formula": "",
+                    "Note": ""
+                },
+                {
+                    "Row": 14,
                     "ColumnName": "ResourceName",
                     "Value": "cookie0015",
+                    "Formula": "",
+                    "Note": ""
+                },
+                {
+                    "Row": 15,
+                    "ColumnName": "Name",
+                    "Value": "Shadow Cookie",
                     "Formula": "",
                     "Note": ""
                 },
@@ -230,8 +342,22 @@
                 },
                 {
                     "Row": 16,
+                    "ColumnName": "Name",
+                    "Value": "Cherry Cookie",
+                    "Formula": "",
+                    "Note": ""
+                },
+                {
+                    "Row": 16,
                     "ColumnName": "ResourceName",
                     "Value": "cookie0017",
+                    "Formula": "",
+                    "Note": ""
+                },
+                {
+                    "Row": 17,
+                    "ColumnName": "Name",
+                    "Value": "Soda Cookie",
                     "Formula": "",
                     "Note": ""
                 },
@@ -244,8 +370,22 @@
                 },
                 {
                     "Row": 18,
+                    "ColumnName": "Name",
+                    "Value": "Moon Cookie",
+                    "Formula": "",
+                    "Note": ""
+                },
+                {
+                    "Row": 18,
                     "ColumnName": "ResourceName",
                     "Value": "cookie0019",
+                    "Formula": "",
+                    "Note": ""
+                },
+                {
+                    "Row": 19,
+                    "ColumnName": "Name",
+                    "Value": "Frost Cookie",
                     "Formula": "",
                     "Note": ""
                 },
@@ -258,6 +398,13 @@
                 },
                 {
                     "Row": 20,
+                    "ColumnName": "Name",
+                    "Value": "Espresso Cookie",
+                    "Formula": "",
+                    "Note": ""
+                },
+                {
+                    "Row": 20,
                     "ColumnName": "ResourceName",
                     "Value": "cookie0021",
                     "Formula": "",
@@ -265,8 +412,22 @@
                 },
                 {
                     "Row": 21,
+                    "ColumnName": "Name",
+                    "Value": "Caramel Cookie",
+                    "Formula": "",
+                    "Note": ""
+                },
+                {
+                    "Row": 21,
                     "ColumnName": "ResourceName",
                     "Value": "cookie0022",
+                    "Formula": "",
+                    "Note": ""
+                },
+                {
+                    "Row": 22,
+                    "ColumnName": "Name",
+                    "Value": "Lotus Cookie",
                     "Formula": "",
                     "Note": ""
                 },

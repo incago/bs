@@ -6,6 +6,12 @@ ScriptableObjects are native to Unity and friendly for small data sets, but the 
 
 BetterScriptable uses `.betterscriptable` files as the authoring source. The linked `.asset` file is the exported runtime data that game systems read.
 
+## Screenshots
+
+![BetterScriptable editor screenshot](screenshot01.png)
+
+![BetterScriptable spreadsheet screenshot](screenshot02.png)
+
 ## Repository Layout
 
 ```text

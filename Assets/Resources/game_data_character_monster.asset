@@ -16,5 +16,12 @@ MonoBehaviour:
   _characterDatas:
   - _id: 1310111
     _weight: 10
-    _thumbnailResourceKey: m1310111_thumbnail
+    _thumbnailResourceKey: 10_skeletonData
     _spineResourceKey: m1310111_skeletonData
+    _resourceOffset: {x: 0, y: 0, z: 0}
+    _runSpeed: 0
+    _actionCooldown: 0
+    _attackCooldown: 0
+    _healthPoint: 0
+    _attackPoint: 0
+  _skillDatas: []
