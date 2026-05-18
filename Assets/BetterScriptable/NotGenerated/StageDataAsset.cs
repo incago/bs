@@ -7,10 +7,14 @@ public sealed class StageDataAsset : ScriptableObject
     public sealed class StageData
     {
         [SerializeField] private int _id;
-        [SerializeField] private string _name;
+        [SerializeField] private string _firstName;
+        [SerializeField] private string _lastName;
+        [SerializeField] private float weight;
 
         public int Id => _id;
-        public string Name => _name;
+        public string FirstName => _firstName;
+        public string lirstName => _lastName;
+        public float Weight => weight;
     }
 
     [SerializeField] private StageData[] _stageDatas = new StageData[0];

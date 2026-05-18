@@ -14,6 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::StageDataAsset
   _stageDatas:
   - _id: 1
-    _name: Sprint
+    _firstName: aaa
+    _lastName: b
+    weight: 10
   - _id: 2
-    _name: Summer
+    _firstName: ccc
+    _lastName: d
+    weight: 20

@@ -21,7 +21,9 @@ internal static class StageDataAssetFactory
                     Fields = new BetterScriptableSchemaField[]
                     {
                         new BetterScriptableSchemaField { TypeName = "int", Name = "Id" },
-                        new BetterScriptableSchemaField { TypeName = "string", Name = "Name" },
+                        new BetterScriptableSchemaField { TypeName = "string", Name = "FirstName" },
+                        new BetterScriptableSchemaField { TypeName = "string", Name = "LastName" },
+                        new BetterScriptableSchemaField { TypeName = "float", Name = "Weight" },
                     }
                 },
             }

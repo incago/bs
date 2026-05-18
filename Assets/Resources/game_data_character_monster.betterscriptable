@@ -26,6 +26,11 @@
                         "IsDesignField": false
                     },
                     {
+                        "TypeName": "string",
+                        "Name": "Name",
+                        "IsDesignField": true
+                    },
+                    {
                         "TypeName": "float",
                         "Name": "Weight",
                         "IsDesignField": false
@@ -43,6 +48,47 @@
                     {
                         "TypeName": "string",
                         "Name": "SpineResourceKey",
+                        "IsDesignField": false
+                    },
+                    {
+                        "TypeName": "Vector3",
+                        "Name": "ResourceOffset",
+                        "IsDesignField": false
+                    },
+                    {
+                        "TypeName": "float",
+                        "Name": "RunSpeed",
+                        "IsDesignField": false
+                    },
+                    {
+                        "TypeName": "float",
+                        "Name": "ActionCooldown",
+                        "IsDesignField": false
+                    },
+                    {
+                        "TypeName": "float",
+                        "Name": "AttackCooldown",
+                        "IsDesignField": false
+                    },
+                    {
+                        "TypeName": "float",
+                        "Name": "HealthPoint",
+                        "IsDesignField": false
+                    },
+                    {
+                        "TypeName": "float",
+                        "Name": "AttackPoint",
+                        "IsDesignField": false
+                    }
+                ]
+            },
+            {
+                "RowTypeName": "SkillData",
+                "FieldName": "SkillDatas",
+                "Fields": [
+                    {
+                        "TypeName": "int",
+                        "Name": "Id",
                         "IsDesignField": false
                     }
                 ]
@@ -78,6 +124,11 @@
                     "Note": ""
                 }
             ]
+        },
+        {
+            "ArrayFieldName": "SkillDatas",
+            "Formulas": [],
+            "Cells": []
         }
     ]
 }

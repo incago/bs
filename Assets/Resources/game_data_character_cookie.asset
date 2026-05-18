@@ -18,3 +18,230 @@ MonoBehaviour:
     _weight: 10
     _thumbnailResourceKey: cookie0001_thumbnail
     _spineResourceKey: cookie0001_skeletonData
+    _resourceOffset: {x: 0, y: 0, z: 0}
+    _runSpeed: 0
+    _actionCooldown: 0
+    _attackCooldown: 0
+    _healthPoint: 0
+    _attackPoint: 0
+  - _id: 2
+    _weight: 0
+    _thumbnailResourceKey: cookie0002_thumbnail
+    _spineResourceKey: cookie0002_skeletonData
+    _resourceOffset: {x: 0, y: 0, z: 0}
+    _runSpeed: 0
+    _actionCooldown: 0
+    _attackCooldown: 0
+    _healthPoint: 0
+    _attackPoint: 0
+  - _id: 3
+    _weight: 0
+    _thumbnailResourceKey: cookie0003_thumbnail
+    _spineResourceKey: cookie0003_skeletonData
+    _resourceOffset: {x: 0, y: 0, z: 0}
+    _runSpeed: 0
+    _actionCooldown: 0
+    _attackCooldown: 0
+    _healthPoint: 0
+    _attackPoint: 0
+  - _id: 4
+    _weight: 0
+    _thumbnailResourceKey: cookie0004_thumbnail
+    _spineResourceKey: cookie0004_skeletonData
+    _resourceOffset: {x: 0, y: 0, z: 0}
+    _runSpeed: 0
+    _actionCooldown: 0
+    _attackCooldown: 0
+    _healthPoint: 0
+    _attackPoint: 0
+  - _id: 5
+    _weight: 0
+    _thumbnailResourceKey: cookie0005_thumbnail
+    _spineResourceKey: cookie0005_skeletonData
+    _resourceOffset: {x: 0, y: 0, z: 0}
+    _runSpeed: 0
+    _actionCooldown: 0
+    _attackCooldown: 0
+    _healthPoint: 0
+    _attackPoint: 0
+  - _id: 6
+    _weight: 0
+    _thumbnailResourceKey: cookie0006_thumbnail
+    _spineResourceKey: cookie0006_skeletonData
+    _resourceOffset: {x: 0, y: 0, z: 0}
+    _runSpeed: 0
+    _actionCooldown: 0
+    _attackCooldown: 0
+    _healthPoint: 0
+    _attackPoint: 0
+  - _id: 7
+    _weight: 0
+    _thumbnailResourceKey: cookie0007_thumbnail
+    _spineResourceKey: cookie0007_skeletonData
+    _resourceOffset: {x: 0, y: 0, z: 0}
+    _runSpeed: 0
+    _actionCooldown: 0
+    _attackCooldown: 0
+    _healthPoint: 0
+    _attackPoint: 0
+  - _id: 8
+    _weight: 0
+    _thumbnailResourceKey: cookie0008_thumbnail
+    _spineResourceKey: cookie0008_skeletonData
+    _resourceOffset: {x: 0, y: 0, z: 0}
+    _runSpeed: 0
+    _actionCooldown: 0
+    _attackCooldown: 0
+    _healthPoint: 0
+    _attackPoint: 0
+  - _id: 9
+    _weight: 0
+    _thumbnailResourceKey: cookie0009_thumbnail
+    _spineResourceKey: cookie0009_skeletonData
+    _resourceOffset: {x: 0, y: 0, z: 0}
+    _runSpeed: 0
+    _actionCooldown: 0
+    _attackCooldown: 0
+    _healthPoint: 0
+    _attackPoint: 0
+  - _id: 10
+    _weight: 0
+    _thumbnailResourceKey: cookie0010_thumbnail
+    _spineResourceKey: cookie0010_skeletonData
+    _resourceOffset: {x: 0, y: 0, z: 0}
+    _runSpeed: 0
+    _actionCooldown: 0
+    _attackCooldown: 0
+    _healthPoint: 0
+    _attackPoint: 0
+  - _id: 11
+    _weight: 0
+    _thumbnailResourceKey: cookie0011_thumbnail
+    _spineResourceKey: cookie0011_skeletonData
+    _resourceOffset: {x: 0, y: 0, z: 0}
+    _runSpeed: 0
+    _actionCooldown: 0
+    _attackCooldown: 0
+    _healthPoint: 0
+    _attackPoint: 0
+  - _id: 12
+    _weight: 0
+    _thumbnailResourceKey: cookie0012_thumbnail
+    _spineResourceKey: cookie0012_skeletonData
+    _resourceOffset: {x: 0, y: 0, z: 0}
+    _runSpeed: 0
+    _actionCooldown: 0
+    _attackCooldown: 0
+    _healthPoint: 0
+    _attackPoint: 0
+  - _id: 13
+    _weight: 0
+    _thumbnailResourceKey: cookie0013_thumbnail
+    _spineResourceKey: cookie0013_skeletonData
+    _resourceOffset: {x: 0, y: 0, z: 0}
+    _runSpeed: 0
+    _actionCooldown: 0
+    _attackCooldown: 0
+    _healthPoint: 0
+    _attackPoint: 0
+  - _id: 14
+    _weight: 0
+    _thumbnailResourceKey: cookie0014_thumbnail
+    _spineResourceKey: cookie0014_skeletonData
+    _resourceOffset: {x: 0, y: 0, z: 0}
+    _runSpeed: 0
+    _actionCooldown: 0
+    _attackCooldown: 0
+    _healthPoint: 0
+    _attackPoint: 0
+  - _id: 15
+    _weight: 0
+    _thumbnailResourceKey: cookie0015_thumbnail
+    _spineResourceKey: cookie0015_skeletonData
+    _resourceOffset: {x: 0, y: 0, z: 0}
+    _runSpeed: 0
+    _actionCooldown: 0
+    _attackCooldown: 0
+    _healthPoint: 0
+    _attackPoint: 0
+  - _id: 16
+    _weight: 0
+    _thumbnailResourceKey: cookie0016_thumbnail
+    _spineResourceKey: cookie0016_skeletonData
+    _resourceOffset: {x: 0, y: 0, z: 0}
+    _runSpeed: 0
+    _actionCooldown: 0
+    _attackCooldown: 0
+    _healthPoint: 0
+    _attackPoint: 0
+  - _id: 17
+    _weight: 0
+    _thumbnailResourceKey: cookie0017_thumbnail
+    _spineResourceKey: cookie0017_skeletonData
+    _resourceOffset: {x: 0, y: 0, z: 0}
+    _runSpeed: 0
+    _actionCooldown: 0
+    _attackCooldown: 0
+    _healthPoint: 0
+    _attackPoint: 0
+  - _id: 18
+    _weight: 0
+    _thumbnailResourceKey: cookie0018_thumbnail
+    _spineResourceKey: cookie0018_skeletonData
+    _resourceOffset: {x: 0, y: 0, z: 0}
+    _runSpeed: 0
+    _actionCooldown: 0
+    _attackCooldown: 0
+    _healthPoint: 0
+    _attackPoint: 0
+  - _id: 19
+    _weight: 0
+    _thumbnailResourceKey: cookie0019_thumbnail
+    _spineResourceKey: cookie0019_skeletonData
+    _resourceOffset: {x: 0, y: 0, z: 0}
+    _runSpeed: 0
+    _actionCooldown: 0
+    _attackCooldown: 0
+    _healthPoint: 0
+    _attackPoint: 0
+  - _id: 20
+    _weight: 0
+    _thumbnailResourceKey: cookie0020_thumbnail
+    _spineResourceKey: cookie0020_skeletonData
+    _resourceOffset: {x: 0, y: 0, z: 0}
+    _runSpeed: 0
+    _actionCooldown: 0
+    _attackCooldown: 0
+    _healthPoint: 0
+    _attackPoint: 0
+  - _id: 21
+    _weight: 0
+    _thumbnailResourceKey: cookie0021_thumbnail
+    _spineResourceKey: cookie0021_skeletonData
+    _resourceOffset: {x: 0, y: 0, z: 0}
+    _runSpeed: 0
+    _actionCooldown: 0
+    _attackCooldown: 0
+    _healthPoint: 0
+    _attackPoint: 0
+  - _id: 22
+    _weight: 0
+    _thumbnailResourceKey: cookie0022_thumbnail
+    _spineResourceKey: cookie0022_skeletonData
+    _resourceOffset: {x: 0, y: 0, z: 0}
+    _runSpeed: 0
+    _actionCooldown: 0
+    _attackCooldown: 0
+    _healthPoint: 0
+    _attackPoint: 0
+  - _id: 23
+    _weight: 0
+    _thumbnailResourceKey: cookie0023_thumbnail
+    _spineResourceKey: cookie0023_skeletonData
+    _resourceOffset: {x: 0, y: 0, z: 0}
+    _runSpeed: 0
+    _actionCooldown: 0
+    _attackCooldown: 0
+    _healthPoint: 0
+    _attackPoint: 0
+  _skillDatas: []
