@@ -8,6 +8,7 @@ namespace BetterScriptable.Editor
     public sealed class BetterScriptableGeneratorWindow : EditorWindow
     {
         private const string WindowTitle = "BetterScriptable Generator";
+        private static GUIStyle _columnLabelStyle;
         private static readonly string[] DataFieldTypeNames =
         {
             "string",
@@ -188,6 +189,11 @@ namespace BetterScriptable.Editor
             FieldDraft field = fields[index];
             using (new EditorGUILayout.HorizontalScope())
             {
+                if (allowDesignField)
+                {
+                    DrawColumnLabel(index);
+                }
+
                 field.TypeName = allowDesignField
                     ? DrawDataFieldTypePopup(field.TypeName)
                     : EditorGUILayout.TextField(field.TypeName, GUILayout.MinWidth(90));
@@ -198,6 +204,24 @@ namespace BetterScriptable.Editor
                         "Design",
                         field.IsDesignField,
                         GUILayout.Width(72));
+
+                    using (new EditorGUI.DisabledScope(index <= 0))
+                    {
+                        if (GUILayout.Button("Up", GUILayout.Width(42)))
+                        {
+                            MoveFieldDraft(fields, index, index - 1);
+                            GUIUtility.ExitGUI();
+                        }
+                    }
+
+                    using (new EditorGUI.DisabledScope(index >= fields.Count - 1))
+                    {
+                        if (GUILayout.Button("Down", GUILayout.Width(52)))
+                        {
+                            MoveFieldDraft(fields, index, index + 1);
+                            GUIUtility.ExitGUI();
+                        }
+                    }
                 }
 
                 if (GUILayout.Button("-", GUILayout.Width(28)))
@@ -205,6 +229,62 @@ namespace BetterScriptable.Editor
                     fields.RemoveAt(index);
                     GUIUtility.ExitGUI();
                 }
+            }
+        }
+
+        private static void MoveFieldDraft(List<FieldDraft> fields, int fromIndex, int toIndex)
+        {
+            if (fromIndex < 0 || fromIndex >= fields.Count || toIndex < 0 || toIndex >= fields.Count)
+            {
+                return;
+            }
+
+            FieldDraft field = fields[fromIndex];
+            fields.RemoveAt(fromIndex);
+            fields.Insert(toIndex, field);
+        }
+
+        private static string GetColumnName(int zeroBasedIndex)
+        {
+            int index = zeroBasedIndex + 1;
+            string columnName = string.Empty;
+
+            while (index > 0)
+            {
+                index--;
+                columnName = (char)('A' + index % 26) + columnName;
+                index /= 26;
+            }
+
+            return columnName;
+        }
+
+        private static void DrawColumnLabel(int zeroBasedIndex)
+        {
+            Rect rect = GUILayoutUtility.GetRect(
+                32f,
+                EditorGUIUtility.singleLineHeight,
+                GUILayout.Width(32f),
+                GUILayout.Height(EditorGUIUtility.singleLineHeight));
+            rect.y += 2f;
+            GUI.Label(rect, GetColumnName(zeroBasedIndex), ColumnLabelStyle);
+        }
+
+        private static GUIStyle ColumnLabelStyle
+        {
+            get
+            {
+                if (_columnLabelStyle == null)
+                {
+                    _columnLabelStyle = new GUIStyle(EditorStyles.miniBoldLabel)
+                    {
+                        alignment = TextAnchor.MiddleCenter,
+                        padding = new RectOffset(0, 0, 0, 0),
+                        margin = new RectOffset(0, 2, 0, 0)
+                    };
+                }
+
+                return _columnLabelStyle;
             }
         }
 

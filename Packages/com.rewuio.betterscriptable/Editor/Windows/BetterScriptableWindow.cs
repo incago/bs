@@ -187,6 +187,7 @@ namespace BetterScriptable.Editor
             }
 
             _serializedObject.Update();
+            bool formulaChanged = ApplySelectedSheetFormulas();
 
             EditorGUI.BeginChangeCheck();
             DrawHeader();
@@ -197,17 +198,26 @@ namespace BetterScriptable.Editor
             DrawSelectedArrayTable();
             EditorGUILayout.EndScrollView();
 
-            DrawArrayTabs();
             DrawFooter();
 
             EditorGUI.EndChangeCheck();
             bool serializedChanged = _serializedObject.ApplyModifiedProperties();
-            bool formulaChanged = ApplySelectedSheetFormulas();
+            if (ShouldApplyFormulasAfterDraw())
+            {
+                formulaChanged |= ApplySelectedSheetFormulas();
+            }
+
             if (serializedChanged || formulaChanged)
             {
                 _isDocumentDirty = true;
                 RefreshArrayPropertyPaths();
             }
+        }
+
+        private static bool ShouldApplyFormulasAfterDraw()
+        {
+            EventType eventType = Event.current.type;
+            return eventType != EventType.Layout && eventType != EventType.Repaint;
         }
 
         private void DrawEmptyState()
@@ -265,6 +275,17 @@ namespace BetterScriptable.Editor
                 }
 
                 GUI.backgroundColor = previousColor;
+
+                if (GUILayout.Button("Import Asset", GUILayout.Width(96), GUILayout.Height(30)))
+                {
+                    ImportFromLinkedAsset();
+                }
+
+                if (GUILayout.Button("Ping Asset", GUILayout.Width(88), GUILayout.Height(30)))
+                {
+                    EditorGUIUtility.PingObject(_targetAsset);
+                }
+
                 GUILayout.FlexibleSpace();
                 GUILayout.Label(_isDocumentDirty ? "Unsaved" : "Saved", EditorStyles.boldLabel);
             }
@@ -1046,43 +1067,49 @@ namespace BetterScriptable.Editor
             sheetState.Cells = cells.ToArray();
         }
 
-        private void DrawArrayTabs()
-        {
-            if (_arrayPropertyPaths.Count <= 1)
-            {
-                return;
-            }
-
-            string[] labels = new string[_arrayPropertyPaths.Count];
-            for (int i = 0; i < _arrayPropertyPaths.Count; i++)
-            {
-                SerializedProperty property = _serializedObject.FindProperty(_arrayPropertyPaths[i]);
-                labels[i] = property?.displayName ?? _arrayPropertyPaths[i];
-            }
-
-            EditorGUILayout.Space(4);
-            _selectedArrayIndex = GUILayout.Toolbar(_selectedArrayIndex, labels);
-        }
-
         private void DrawFooter()
         {
             EditorGUILayout.Space(6);
             using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
             {
-                if (GUILayout.Button("Import Asset", EditorStyles.toolbarButton, GUILayout.Width(96)))
-                {
-                    ImportFromLinkedAsset();
-                }
-
-                if (GUILayout.Button("Ping Asset", EditorStyles.toolbarButton, GUILayout.Width(88)))
-                {
-                    EditorGUIUtility.PingObject(_targetAsset);
-                }
+                DrawArrayDataButtons();
 
                 GUILayout.FlexibleSpace();
                 GUILayout.Label(_isDocumentDirty ? "Unsaved" : "Saved", EditorStyles.miniLabel);
                 GUILayout.Space(8);
                 GUILayout.Label(BetterScriptableDocumentIO.ResolveLinkedAssetPath(_document), EditorStyles.miniLabel);
+            }
+        }
+
+        private void DrawArrayDataButtons()
+        {
+            if (_arrayPropertyPaths.Count == 0)
+            {
+                using (new EditorGUI.DisabledScope(true))
+                {
+                    GUILayout.Button("No Array Data", EditorStyles.toolbarButton, GUILayout.Width(112));
+                }
+
+                return;
+            }
+
+            _selectedArrayIndex = Mathf.Clamp(_selectedArrayIndex, 0, _arrayPropertyPaths.Count - 1);
+            for (int i = 0; i < _arrayPropertyPaths.Count; i++)
+            {
+                SerializedProperty property = _serializedObject.FindProperty(_arrayPropertyPaths[i]);
+                string label = property?.displayName ?? _arrayPropertyPaths[i];
+                bool selected = i == _selectedArrayIndex;
+                bool nextSelected = GUILayout.Toggle(
+                    selected,
+                    label,
+                    EditorStyles.toolbarButton,
+                    GUILayout.MinWidth(96));
+                if (nextSelected && !selected)
+                {
+                    _selectedArrayIndex = i;
+                    GUI.FocusControl(null);
+                    Repaint();
+                }
             }
         }
 
