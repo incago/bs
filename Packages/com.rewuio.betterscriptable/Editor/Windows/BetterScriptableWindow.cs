@@ -870,9 +870,39 @@ namespace BetterScriptable.Editor
 
         private static SerializedProperty GetCellProperty(SerializedProperty element, TableColumn column)
         {
-            return string.IsNullOrEmpty(column.PropertyName)
-                ? element
-                : element.FindPropertyRelative(column.PropertyName);
+            if (string.IsNullOrEmpty(column.PropertyName))
+            {
+                return element;
+            }
+
+            SerializedProperty property = element.FindPropertyRelative(column.PropertyName);
+            if (property != null)
+            {
+                return property;
+            }
+
+            if (string.IsNullOrEmpty(column.SchemaName) || column.SchemaName == column.PropertyName)
+            {
+                return null;
+            }
+
+            property = element.FindPropertyRelative(column.SchemaName);
+            if (property != null)
+            {
+                return property;
+            }
+
+            string camelCaseSchemaName = ToLowerCamelCase(column.SchemaName);
+            return camelCaseSchemaName == column.SchemaName
+                ? null
+                : element.FindPropertyRelative(camelCaseSchemaName);
+        }
+
+        private static string ToLowerCamelCase(string value)
+        {
+            return string.IsNullOrEmpty(value)
+                ? string.Empty
+                : char.ToLowerInvariant(value[0]) + value.Substring(1);
         }
 
         private static string GetCellControlName(string arrayPropertyPath, int rowIndex, int columnIndex)
