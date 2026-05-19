@@ -5,7 +5,7 @@ namespace BetterScriptable.Editor
     [Serializable]
     public sealed class BetterScriptableDocument
     {
-        public int Version = 1;
+        public int Version = 2;
         public string AssetGuid = string.Empty;
         public string AssetPath = string.Empty;
         public string AssetTypeName = string.Empty;
@@ -27,6 +27,7 @@ namespace BetterScriptable.Editor
     [Serializable]
     public sealed class BetterScriptableSchemaField
     {
+        public string Id = string.Empty;
         public string TypeName = string.Empty;
         public string Name = string.Empty;
         public bool IsDesignField;
@@ -60,6 +61,7 @@ namespace BetterScriptable.Editor
     public sealed class BetterScriptableCellState
     {
         public int Row;
+        public string ColumnId = string.Empty;
         public string ColumnName = string.Empty;
         public string Value = string.Empty;
         public string Formula = string.Empty;

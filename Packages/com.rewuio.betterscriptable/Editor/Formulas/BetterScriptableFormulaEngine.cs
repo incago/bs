@@ -75,17 +75,39 @@ namespace BetterScriptable.Editor
             IBetterScriptableFormulaCellStore cellStore,
             out string error)
         {
-            error = string.Empty;
-            if (arrayProperty == null || formulas == null || formulas.Count == 0)
+            if (arrayProperty == null)
+            {
+                error = string.Empty;
+                return false;
+            }
+
+            if (!TryCompile(columnPropertyNames, formulas, arrayProperty.arraySize, out CompiledFormulaSet compiledFormulas, out error))
             {
                 return false;
             }
 
-            bool changed = false;
+            return TryApplyCompiled(arrayProperty, columnPropertyNames, compiledFormulas, cellStore, out error);
+        }
+
+        public static bool TryCompile(
+            IReadOnlyList<string> columnPropertyNames,
+            IReadOnlyList<BetterScriptableFormulaState> formulas,
+            int rowCount,
+            out CompiledFormulaSet compiledFormulas,
+            out string error)
+        {
+            compiledFormulas = CompiledFormulaSet.Empty;
+            error = string.Empty;
+            if (formulas == null || formulas.Count == 0)
+            {
+                return true;
+            }
+
             ColumnLookup columnLookup = new ColumnLookup(columnPropertyNames);
             List<ParsedFormula> parsedFormulas = new List<ParsedFormula>();
             HashSet<string> definedCellTargets = new HashSet<string>();
             HashSet<int> definedColumnTargets = new HashSet<int>();
+            HashSet<string> targetKeys = new HashSet<string>();
 
             for (int i = 0; i < formulas.Count; i++)
             {
@@ -98,7 +120,7 @@ namespace BetterScriptable.Editor
                 if (!TrySplitFormula(formula.Expression, columnLookup, out FormulaTarget target, out string expression))
                 {
                     error = $"Formula {i + 1}: expected format like C = A + B or C1 = A1 + B1.";
-                    return changed;
+                    return false;
                 }
 
                 if (target.IsColumn)
@@ -106,43 +128,71 @@ namespace BetterScriptable.Editor
                     if (!columnLookup.IsColumnInRange(target.Column))
                     {
                         error = $"Formula {i + 1}: target column {FormatColumnName(target.Column)} is outside the table.";
-                        return changed;
+                        return false;
                     }
 
                     if (!definedColumnTargets.Add(target.Column))
                     {
                         error = $"Formula {i + 1}: target column {FormatColumnName(target.Column)} is already defined by another formula.";
-                        return changed;
+                        return false;
                     }
 
                     parsedFormulas.Add(new ParsedFormula(i + 1, target, expression));
+                    for (int row = 0; row < rowCount; row++)
+                    {
+                        targetKeys.Add(GetTargetKey(new BetterScriptableCellAddress(row, target.Column)));
+                    }
+
                     continue;
                 }
 
-                if (!IsCellInRange(arrayProperty, columnPropertyNames, target.Cell))
+                if (!IsCellInRange(rowCount, columnLookup.Count, target.Cell))
                 {
                     error = $"Formula {i + 1}: target cell {target.Cell} is outside the table.";
-                    return changed;
+                    return false;
                 }
 
                 string targetKey = GetTargetKey(target.Cell);
                 if (!definedCellTargets.Add(targetKey))
                 {
                     error = $"Formula {i + 1}: target cell {target.Cell} is already defined by another formula.";
-                    return changed;
+                    return false;
                 }
 
+                targetKeys.Add(targetKey);
                 parsedFormulas.Add(new ParsedFormula(i + 1, target, expression));
             }
 
-            foreach (ParsedFormula formula in parsedFormulas)
+            compiledFormulas = new CompiledFormulaSet(
+                columnLookup,
+                parsedFormulas,
+                definedCellTargets,
+                targetKeys);
+            return true;
+        }
+
+        public static bool TryApplyCompiled(
+            SerializedProperty arrayProperty,
+            IReadOnlyList<string> columnPropertyNames,
+            CompiledFormulaSet compiledFormulas,
+            IBetterScriptableFormulaCellStore cellStore,
+            out string error)
+        {
+            error = string.Empty;
+            if (arrayProperty == null || compiledFormulas == null || compiledFormulas.IsEmpty)
+            {
+                return false;
+            }
+
+            bool changed = false;
+            foreach (ParsedFormula formula in compiledFormulas.Formulas)
             {
                 if (formula.Target.IsColumn)
                 {
                     for (int row = 0; row < arrayProperty.arraySize; row++)
                     {
                         BetterScriptableCellAddress cell = new BetterScriptableCellAddress(row, formula.Target.Column);
-                        if (definedCellTargets.Contains(GetTargetKey(cell)))
+                        if (compiledFormulas.IsSpecificCellTarget(cell))
                         {
                             continue;
                         }
@@ -150,7 +200,7 @@ namespace BetterScriptable.Editor
                         if (!TryApplyCellFormula(
                                 arrayProperty,
                                 columnPropertyNames,
-                                columnLookup,
+                                compiledFormulas.ColumnLookup,
                                 cellStore,
                                 formula.Expression,
                                 cell,
@@ -170,7 +220,7 @@ namespace BetterScriptable.Editor
                 if (!TryApplyCellFormula(
                         arrayProperty,
                         columnPropertyNames,
-                        columnLookup,
+                        compiledFormulas.ColumnLookup,
                         cellStore,
                         formula.Expression,
                         formula.Target.Cell,
@@ -273,10 +323,15 @@ namespace BetterScriptable.Editor
             IReadOnlyList<string> columnPropertyNames,
             BetterScriptableCellAddress address)
         {
+            return IsCellInRange(arrayProperty.arraySize, columnPropertyNames.Count, address);
+        }
+
+        private static bool IsCellInRange(int rowCount, int columnCount, BetterScriptableCellAddress address)
+        {
             return address.Row >= 0
-                && address.Row < arrayProperty.arraySize
+                && address.Row < rowCount
                 && address.Column >= 0
-                && address.Column < columnPropertyNames.Count;
+                && address.Column < columnCount;
         }
 
         private static SerializedProperty GetCellProperty(
@@ -860,7 +915,46 @@ namespace BetterScriptable.Editor
             }
         }
 
-        private readonly struct ParsedFormula
+        public sealed class CompiledFormulaSet
+        {
+            public static readonly CompiledFormulaSet Empty = new CompiledFormulaSet(
+                new ColumnLookup(Array.Empty<string>()),
+                new List<ParsedFormula>(),
+                new HashSet<string>(),
+                new HashSet<string>());
+
+            private readonly ColumnLookup _columnLookup;
+            private readonly List<ParsedFormula> _formulas;
+            private readonly HashSet<string> _definedCellTargets;
+            private readonly HashSet<string> _targetKeys;
+
+            internal CompiledFormulaSet(
+                ColumnLookup columnLookup,
+                List<ParsedFormula> formulas,
+                HashSet<string> definedCellTargets,
+                HashSet<string> targetKeys)
+            {
+                _columnLookup = columnLookup;
+                _formulas = formulas;
+                _definedCellTargets = definedCellTargets;
+                _targetKeys = targetKeys;
+            }
+
+            public bool IsEmpty => _formulas.Count == 0;
+
+            public IReadOnlyCollection<string> TargetKeys => _targetKeys;
+
+            internal ColumnLookup ColumnLookup => _columnLookup;
+
+            internal IReadOnlyList<ParsedFormula> Formulas => _formulas;
+
+            internal bool IsSpecificCellTarget(BetterScriptableCellAddress address)
+            {
+                return _definedCellTargets.Contains(GetTargetKey(address));
+            }
+        }
+
+        internal readonly struct ParsedFormula
         {
             public readonly int SourceIndex;
             public readonly FormulaTarget Target;
@@ -874,7 +968,7 @@ namespace BetterScriptable.Editor
             }
         }
 
-        private readonly struct FormulaTarget
+        internal readonly struct FormulaTarget
         {
             public readonly bool IsColumn;
             public readonly BetterScriptableCellAddress Cell;
@@ -898,7 +992,7 @@ namespace BetterScriptable.Editor
             }
         }
 
-        private sealed class ColumnLookup
+        internal sealed class ColumnLookup
         {
             private readonly Dictionary<string, int> _columnsByName = new Dictionary<string, int>();
 

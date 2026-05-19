@@ -17,7 +17,7 @@ namespace BetterScriptable.Editor
             RegexOptions.Compiled | RegexOptions.Singleline);
 
         private static readonly Regex StringAssignmentPattern = new Regex(
-            @"\b(?<name>TypeName|Name)\s*=\s*""(?<value>[^""]*)""",
+            @"\b(?<name>Id|TypeName|Name)\s*=\s*""(?<value>[^""]*)""",
             RegexOptions.Compiled);
 
         private static readonly Regex BoolAssignmentPattern = new Regex(
@@ -180,6 +180,7 @@ namespace BetterScriptable.Editor
 
             schema.Fields = ParseAssetFields(factoryCode);
             schema.Tables = ParseTables(factoryCode);
+            BetterScriptableSchemaUtility.EnsureFieldIds(schema);
             return true;
         }
 
@@ -269,6 +270,7 @@ namespace BetterScriptable.Editor
             foreach (Match match in FieldPattern.Matches(block))
             {
                 string body = match.Groups["body"].Value;
+                string fieldId = string.Empty;
                 string typeName = string.Empty;
                 string fieldName = string.Empty;
                 bool isDesignField = false;
@@ -279,6 +281,9 @@ namespace BetterScriptable.Editor
                     string value = assignment.Groups["value"].Value;
                     switch (name)
                     {
+                        case "Id":
+                            fieldId = value;
+                            break;
                         case "TypeName":
                             typeName = value;
                             break;
@@ -306,6 +311,7 @@ namespace BetterScriptable.Editor
 
                 fields.Add(new BetterScriptableSchemaField
                 {
+                    Id = fieldId,
                     TypeName = typeName,
                     Name = fieldName,
                     IsDesignField = isDesignField

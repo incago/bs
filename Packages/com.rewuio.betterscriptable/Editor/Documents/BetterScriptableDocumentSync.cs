@@ -18,6 +18,20 @@ namespace BetterScriptable.Editor
             string assetGuid = AssetDatabase.AssetPathToGUID(assetPath);
             string assetTypeName = linkedAsset.GetType().AssemblyQualifiedName;
 
+            if (document.Version < 2)
+            {
+                document.Version = 2;
+                changed = true;
+            }
+
+            if (document.Schema == null)
+            {
+                document.Schema = new BetterScriptableDocumentSchema();
+                changed = true;
+            }
+
+            changed |= BetterScriptableSchemaUtility.EnsureFieldIds(document.Schema);
+
             if (!string.IsNullOrEmpty(assetPath) && document.AssetPath != assetPath)
             {
                 document.AssetPath = assetPath;

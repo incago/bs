@@ -13,6 +13,7 @@ namespace BetterScriptable.Editor
         public static void Generate(BetterScriptableGenerationRequest request)
         {
             ValidateRequest(request);
+            BetterScriptableSchemaUtility.EnsureFieldIds(request.Schema);
 
             string runtimeDirectory = request.OutputDirectory;
             string editorDirectory = Path.Combine(runtimeDirectory, "Editor").Replace('\\', '/');
@@ -179,7 +180,9 @@ namespace BetterScriptable.Editor
             foreach (BetterScriptableSchemaField field in fields)
             {
                 builder.Append(childIndentation)
-                    .Append("new BetterScriptableSchemaField { TypeName = \"")
+                    .Append("new BetterScriptableSchemaField { Id = \"")
+                    .Append(EscapeString(field.Id))
+                    .Append("\", TypeName = \"")
                     .Append(EscapeString(field.TypeName))
                     .Append("\", Name = \"")
                     .Append(EscapeString(field.Name))

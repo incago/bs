@@ -141,11 +141,13 @@ namespace BetterScriptable.Editor
                     out _)
                 && request?.Schema != null)
             {
+                BetterScriptableSchemaUtility.EnsureFieldIds(request.Schema);
                 schema = request.Schema;
                 return true;
             }
 
             schema = CreateSchemaFromAssetType(sourceAsset.GetType(), assetPath);
+            BetterScriptableSchemaUtility.EnsureFieldIds(schema);
             return TryCreateFactoryForExistingAsset(sourceAsset, assetPath, schema, out error);
         }
 
@@ -323,7 +325,9 @@ namespace BetterScriptable.Editor
             foreach (BetterScriptableSchemaField field in fields)
             {
                 builder.Append(childIndentation)
-                    .Append("new BetterScriptableSchemaField { TypeName = \"")
+                    .Append("new BetterScriptableSchemaField { Id = \"")
+                    .Append(EscapeString(field.Id))
+                    .Append("\", TypeName = \"")
                     .Append(EscapeString(field.TypeName))
                     .Append("\", Name = \"")
                     .Append(EscapeString(field.Name))

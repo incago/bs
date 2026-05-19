@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEditor;
 using UnityEngine;
 
@@ -312,7 +313,13 @@ namespace BetterScriptable.Editor
         {
             try
             {
-                BetterScriptableCodeGenerator.Generate(CreateRequest());
+                BetterScriptableGenerationRequest request = CreateRequest();
+                if (!ConfirmPotentialFormulaColumnChanges(request))
+                {
+                    return;
+                }
+
+                BetterScriptableCodeGenerator.Generate(request);
                 _loadedSourcePath = string.Empty;
                 _loadMessage = "Generated scripts. Select the generated asset class later to load this schema again.";
             }
@@ -323,6 +330,197 @@ namespace BetterScriptable.Editor
             {
                 EditorUtility.DisplayDialog("BetterScriptable Generation Failed", exception.Message, "OK");
             }
+        }
+
+        private static bool ConfirmPotentialFormulaColumnChanges(BetterScriptableGenerationRequest nextRequest)
+        {
+            if (!TryLoadExistingGenerationRequest(nextRequest, out BetterScriptableGenerationRequest previousRequest)
+                || !TryCreateFormulaColumnWarning(previousRequest.Schema, nextRequest.Schema, out string warningMessage))
+            {
+                return true;
+            }
+
+            return EditorUtility.DisplayDialog(
+                "Formula column references may change",
+                warningMessage,
+                "Generate Anyway",
+                "Cancel");
+        }
+
+        private static bool TryLoadExistingGenerationRequest(
+            BetterScriptableGenerationRequest nextRequest,
+            out BetterScriptableGenerationRequest previousRequest)
+        {
+            previousRequest = null;
+            string outputDirectory = (nextRequest.OutputDirectory ?? string.Empty).Trim().Replace('\\', '/');
+            string assetClassName = (nextRequest.AssetClassName ?? string.Empty).Trim();
+            if (string.IsNullOrEmpty(outputDirectory) || string.IsNullOrEmpty(assetClassName))
+            {
+                return false;
+            }
+
+            string runtimePath = $"{outputDirectory}/{assetClassName}.cs";
+            if (File.Exists(runtimePath)
+                && BetterScriptableGeneratedClassLoader.TryLoadFromRuntimeScript(
+                    runtimePath,
+                    out previousRequest,
+                    out _,
+                    out _))
+            {
+                return true;
+            }
+
+            string factoryPath = $"{outputDirectory}/Editor/{assetClassName}Factory.cs";
+            return File.Exists(factoryPath)
+                && BetterScriptableGeneratedClassLoader.TryLoadFromFactoryScript(
+                    factoryPath,
+                    out previousRequest,
+                    out _,
+                    out _);
+        }
+
+        private static bool TryCreateFormulaColumnWarning(
+            BetterScriptableDocumentSchema previousSchema,
+            BetterScriptableDocumentSchema nextSchema,
+            out string warningMessage)
+        {
+            warningMessage = string.Empty;
+            List<string> changedTables = new List<string>();
+            BetterScriptableSchemaTable[] previousTables = previousSchema?.Tables ?? Array.Empty<BetterScriptableSchemaTable>();
+
+            foreach (BetterScriptableSchemaTable previousTable in previousTables)
+            {
+                if (previousTable == null || string.IsNullOrEmpty(previousTable.FieldName))
+                {
+                    continue;
+                }
+
+                BetterScriptableSchemaTable nextTable = FindMatchingTable(nextSchema, previousTable);
+                if (nextTable == null)
+                {
+                    changedTables.Add($"- {previousTable.FieldName}: table was removed or renamed.");
+                    continue;
+                }
+
+                if (!IsSimpleFieldAppend(previousTable.Fields, nextTable.Fields))
+                {
+                    changedTables.Add(
+                        $"- {previousTable.FieldName}: columns changed from [{FormatFieldList(previousTable.Fields)}] to [{FormatFieldList(nextTable.Fields)}].");
+                }
+            }
+
+            if (changedTables.Count == 0)
+            {
+                return false;
+            }
+
+            warningMessage =
+                "This appears to regenerate an existing BetterScriptable class.\n\n" +
+                "One or more array data fields changed in a way that is not a simple append to the end. Existing formulas that reference columns such as A, B, C may no longer point to the intended fields.\n\n" +
+                "Affected tables:\n" +
+                string.Join("\n", changedTables) +
+                "\n\nDo you want to continue generation?";
+            return true;
+        }
+
+        private static BetterScriptableSchemaTable FindMatchingTable(
+            BetterScriptableDocumentSchema schema,
+            BetterScriptableSchemaTable table)
+        {
+            BetterScriptableSchemaTable[] tables = schema?.Tables ?? Array.Empty<BetterScriptableSchemaTable>();
+            foreach (BetterScriptableSchemaTable candidate in tables)
+            {
+                if (candidate == null)
+                {
+                    continue;
+                }
+
+                if (IsSameSchemaName(candidate.FieldName, table.FieldName))
+                {
+                    return candidate;
+                }
+            }
+
+            return null;
+        }
+
+        private static bool IsSimpleFieldAppend(
+            BetterScriptableSchemaField[] previousFields,
+            BetterScriptableSchemaField[] nextFields)
+        {
+            previousFields = previousFields ?? Array.Empty<BetterScriptableSchemaField>();
+            nextFields = nextFields ?? Array.Empty<BetterScriptableSchemaField>();
+            if (nextFields.Length < previousFields.Length)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < previousFields.Length; i++)
+            {
+                if (!IsSameSchemaField(previousFields[i], nextFields[i]))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static bool IsSameSchemaField(BetterScriptableSchemaField previousField, BetterScriptableSchemaField nextField)
+        {
+            if (previousField == null || nextField == null)
+            {
+                return previousField == nextField;
+            }
+
+            if (BetterScriptableSchemaUtility.HasFieldId(previousField)
+                && BetterScriptableSchemaUtility.HasFieldId(nextField))
+            {
+                return BetterScriptableSchemaUtility.AreSameFieldId(previousField, nextField)
+                    && string.Equals(NormalizeTypeName(previousField.TypeName), NormalizeTypeName(nextField.TypeName), StringComparison.Ordinal)
+                    && previousField.IsDesignField == nextField.IsDesignField;
+            }
+
+            return IsSameSchemaName(previousField.Name, nextField.Name)
+                && string.Equals(NormalizeTypeName(previousField.TypeName), NormalizeTypeName(nextField.TypeName), StringComparison.Ordinal)
+                && previousField.IsDesignField == nextField.IsDesignField;
+        }
+
+        private static bool IsSameSchemaName(string left, string right)
+        {
+            return string.Equals(
+                BetterScriptableNameUtility.ToPascalCase(left ?? string.Empty),
+                BetterScriptableNameUtility.ToPascalCase(right ?? string.Empty),
+                StringComparison.Ordinal);
+        }
+
+        private static string NormalizeTypeName(string typeName)
+        {
+            return (typeName ?? string.Empty).Trim();
+        }
+
+        private static string FormatFieldList(BetterScriptableSchemaField[] fields)
+        {
+            fields = fields ?? Array.Empty<BetterScriptableSchemaField>();
+            if (fields.Length == 0)
+            {
+                return "none";
+            }
+
+            List<string> labels = new List<string>();
+            for (int i = 0; i < fields.Length; i++)
+            {
+                BetterScriptableSchemaField field = fields[i];
+                if (field == null)
+                {
+                    continue;
+                }
+
+                string designLabel = field.IsDesignField ? ", design" : string.Empty;
+                labels.Add($"{GetColumnName(i)} {field.Name}({field.TypeName}{designLabel})");
+            }
+
+            return string.Join(", ", labels);
         }
 
         private bool TryLoadSelectedGeneratedClass(bool force = false)
@@ -353,6 +551,7 @@ namespace BetterScriptable.Editor
 
         private void ApplyRequest(BetterScriptableGenerationRequest request)
         {
+            BetterScriptableSchemaUtility.EnsureFieldIds(request.Schema);
             _assetClassName = request.AssetClassName;
             _namespaceName = request.NamespaceName;
             _menuPath = request.MenuPath;
@@ -361,7 +560,7 @@ namespace BetterScriptable.Editor
             _assetFields.Clear();
             foreach (BetterScriptableSchemaField field in request.Schema.Fields)
             {
-                _assetFields.Add(new FieldDraft(field.TypeName, field.Name));
+                _assetFields.Add(new FieldDraft(field.TypeName, field.Name, false, field.Id));
             }
 
             _tables.Clear();
@@ -370,7 +569,7 @@ namespace BetterScriptable.Editor
                 TableDraft tableDraft = new TableDraft(table.RowTypeName, table.FieldName);
                 foreach (BetterScriptableSchemaField field in table.Fields)
                 {
-                    tableDraft.Fields.Add(new FieldDraft(field.TypeName, field.Name, field.IsDesignField));
+                    tableDraft.Fields.Add(new FieldDraft(field.TypeName, field.Name, field.IsDesignField, field.Id));
                 }
 
                 _tables.Add(tableDraft);
@@ -387,6 +586,7 @@ namespace BetterScriptable.Editor
                 Fields = ToSchemaFields(_assetFields),
                 Tables = ToSchemaTables(_tables)
             };
+            BetterScriptableSchemaUtility.EnsureFieldIds(schema);
 
             return new BetterScriptableGenerationRequest
             {
@@ -410,6 +610,9 @@ namespace BetterScriptable.Editor
 
                 schemaFields.Add(new BetterScriptableSchemaField
                 {
+                    Id = string.IsNullOrWhiteSpace(field.Id)
+                        ? BetterScriptableSchemaUtility.CreateNewFieldId()
+                        : field.Id.Trim(),
                     TypeName = field.TypeName.Trim(),
                     Name = BetterScriptableNameUtility.ToPascalCase(field.Name),
                     IsDesignField = field.IsDesignField
@@ -446,12 +649,16 @@ namespace BetterScriptable.Editor
             public string TypeName;
             public string Name;
             public bool IsDesignField;
+            public string Id;
 
-            public FieldDraft(string typeName, string name, bool isDesignField = false)
+            public FieldDraft(string typeName, string name, bool isDesignField = false, string id = "")
             {
                 TypeName = typeName;
                 Name = name;
                 IsDesignField = isDesignField;
+                Id = string.IsNullOrWhiteSpace(id)
+                    ? BetterScriptableSchemaUtility.CreateNewFieldId()
+                    : id.Trim();
             }
 
             public bool IsEmpty => string.IsNullOrWhiteSpace(TypeName) && string.IsNullOrWhiteSpace(Name);

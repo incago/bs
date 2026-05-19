@@ -20,6 +20,7 @@ namespace BetterScriptable.Editor
             string targetAssetPath,
             BetterScriptableDocumentSchema schema)
         {
+            BetterScriptableSchemaUtility.EnsureFieldIds(schema);
             return new BetterScriptableDocument
             {
                 AssetGuid = AssetDatabase.AssetPathToGUID(targetAssetPath),

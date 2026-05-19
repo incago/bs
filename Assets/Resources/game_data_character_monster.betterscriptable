@@ -1,5 +1,5 @@
 {
-    "Version": 1,
+    "Version": 2,
     "AssetGuid": "8fe5b8218e8f448b89d5aeefc481683d",
     "AssetPath": "Assets/Resources/game_data_character_monster.asset",
     "AssetTypeName": "BetterScriptable.Generated.CharacterDataAsset, Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
@@ -10,6 +10,7 @@
         "MenuPath": "BetterScriptable/game_data_character",
         "Fields": [
             {
+                "Id": "field_44363b49812899c2",
                 "TypeName": "string",
                 "Name": "CharacterType",
                 "IsDesignField": false
@@ -21,61 +22,73 @@
                 "FieldName": "CharacterDatas",
                 "Fields": [
                     {
+                        "Id": "field_a631c88c0301bb17",
                         "TypeName": "int",
                         "Name": "Id",
                         "IsDesignField": false
                     },
                     {
+                        "Id": "field_8b3423c2c8dfe2fd",
                         "TypeName": "string",
                         "Name": "Name",
                         "IsDesignField": true
                     },
                     {
+                        "Id": "field_d65905368e261141",
                         "TypeName": "float",
                         "Name": "Weight",
                         "IsDesignField": false
                     },
                     {
+                        "Id": "field_0a7bcfc06e89ec59",
                         "TypeName": "string",
                         "Name": "ResourceName",
                         "IsDesignField": true
                     },
                     {
+                        "Id": "field_455eb383716f6c95",
                         "TypeName": "string",
                         "Name": "ThumbnailResourceKey",
                         "IsDesignField": false
                     },
                     {
+                        "Id": "field_ddb02aa0036591a6",
                         "TypeName": "string",
                         "Name": "SpineResourceKey",
                         "IsDesignField": false
                     },
                     {
+                        "Id": "field_0bd143838be7506c",
                         "TypeName": "Vector3",
                         "Name": "ResourceOffset",
                         "IsDesignField": false
                     },
                     {
+                        "Id": "field_48f02033e91fd8b1",
                         "TypeName": "float",
                         "Name": "RunSpeed",
                         "IsDesignField": false
                     },
                     {
+                        "Id": "field_a81b74f1d5de0cda",
                         "TypeName": "float",
                         "Name": "ActionCooldown",
                         "IsDesignField": false
                     },
                     {
+                        "Id": "field_5bca0e7beace5aac",
                         "TypeName": "float",
                         "Name": "AttackCooldown",
                         "IsDesignField": false
                     },
                     {
+                        "Id": "field_b12897b423e37463",
                         "TypeName": "float",
                         "Name": "HealthPoint",
                         "IsDesignField": false
                     },
                     {
+                        "Id": "field_e03f3a7f3ed6b31d",
                         "TypeName": "float",
                         "Name": "AttackPoint",
                         "IsDesignField": false
@@ -87,6 +100,7 @@
                 "FieldName": "SkillDatas",
                 "Fields": [
                     {
+                        "Id": "field_84f1401280d5777f",
                         "TypeName": "int",
                         "Name": "Id",
                         "IsDesignField": false
@@ -102,6 +116,7 @@
             "Cells": [
                 {
                     "Row": 0,
+                    "ColumnId": "field_0a7bcfc06e89ec59",
                     "ColumnName": "ResourceName",
                     "Value": "10_thumbnail",
                     "Formula": "",

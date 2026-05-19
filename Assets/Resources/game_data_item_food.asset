@@ -12,5 +12,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f203deb1ee153487fb489f2430dc157f, type: 3}
   m_Name: game_data_item_food
   m_EditorClassIdentifier: Assembly-CSharp::BetterScriptable.Generated.ItemDataAsset
-  _itemType: 
+  _itemCategory: 
   _itemDatas: []

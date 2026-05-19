@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -40,7 +41,11 @@ namespace BetterScriptable.Editor
         private string _formulaError;
         private string _pendingFormulaFocusControlName;
         private string _pendingCellFocusControlName;
+        private float _tableRowViewportHeight;
         private readonly Dictionary<string, string> _formulaDrafts = new Dictionary<string, string>();
+        private readonly Dictionary<BetterScriptableSheetState, FormulaSheetCache> _formulaSheetCaches =
+            new Dictionary<BetterScriptableSheetState, FormulaSheetCache>();
+        private readonly HashSet<BetterScriptableSheetState> _dirtyFormulaSheets = new HashSet<BetterScriptableSheetState>();
 
         [MenuItem("Tools/BetterScriptable/Open")]
         public static BetterScriptableWindow Open()
@@ -125,6 +130,8 @@ namespace BetterScriptable.Editor
             _pendingFormulaFocusControlName = string.Empty;
             _pendingCellFocusControlName = string.Empty;
             _formulaDrafts.Clear();
+            _formulaSheetCaches.Clear();
+            _dirtyFormulaSheets.Clear();
 
             if (!BetterScriptableDocumentIO.TryRead(documentPath, out _document, out _loadError))
             {
@@ -157,6 +164,7 @@ namespace BetterScriptable.Editor
 
             _serializedObject = new SerializedObject(_workingCopy);
             RefreshArrayPropertyPaths();
+            MarkAllFormulaSheetsDirty();
         }
 
         private bool TryRefreshLoadedDocumentSchema()
@@ -188,7 +196,7 @@ namespace BetterScriptable.Editor
             }
 
             _serializedObject.Update();
-            bool formulaChanged = ApplySelectedSheetFormulas();
+            bool formulaChanged = ApplySelectedSheetFormulasIfDirty();
 
             EditorGUI.BeginChangeCheck();
             DrawHeader();
@@ -203,9 +211,14 @@ namespace BetterScriptable.Editor
 
             EditorGUI.EndChangeCheck();
             bool serializedChanged = _serializedObject.ApplyModifiedProperties();
+            if (serializedChanged)
+            {
+                MarkSelectedSheetFormulasDirty();
+            }
+
             if (ShouldApplyFormulasAfterDraw())
             {
-                formulaChanged |= ApplySelectedSheetFormulas();
+                formulaChanged |= ApplySelectedSheetFormulasIfDirty();
             }
 
             if (serializedChanged || formulaChanged)
@@ -398,6 +411,7 @@ namespace BetterScriptable.Editor
             if (EnsureFormulaIds(sheetState))
             {
                 _isDocumentDirty = true;
+                InvalidateSheetFormulaCache(sheetState, markDirty: true);
             }
 
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
@@ -422,6 +436,7 @@ namespace BetterScriptable.Editor
                         formulas.Add(newFormula);
                         sheetState.Formulas = formulas.ToArray();
                         _isDocumentDirty = true;
+                        InvalidateSheetFormulaCache(sheetState, markDirty: true);
                         _pendingFormulaFocusControlName = GetFormulaControlName(newFormula);
                         _showFormulaList = true;
                         ClearTextFieldFocus();
@@ -434,9 +449,10 @@ namespace BetterScriptable.Editor
                         if (CommitFormulaDrafts(sheetState))
                         {
                             _isDocumentDirty = true;
+                            InvalidateSheetFormulaCache(sheetState, markDirty: true);
                         }
 
-                        ApplyFormulas(arrayProperty, columns, sheetState, markDirty: true);
+                        ApplyFormulas(arrayProperty, columns, sheetState, markDirty: true, forceRecompile: true);
                     }
                 }
 
@@ -467,7 +483,8 @@ namespace BetterScriptable.Editor
                 if (changed || committedDrafts)
                 {
                     _isDocumentDirty = true;
-                    ApplyFormulas(arrayProperty, columns, sheetState, markDirty: true);
+                    InvalidateSheetFormulaCache(sheetState, markDirty: true);
+                    ApplyFormulas(arrayProperty, columns, sheetState, markDirty: true, forceRecompile: true);
                 }
             }
         }
@@ -507,8 +524,9 @@ namespace BetterScriptable.Editor
                         formulaList.RemoveAt(i);
                         sheetState.Formulas = formulaList.ToArray();
                         _isDocumentDirty = true;
+                        InvalidateSheetFormulaCache(sheetState, markDirty: true);
                         ClearTextFieldFocus();
-                        ApplyFormulas(arrayProperty, columns, sheetState, markDirty: true);
+                        ApplyFormulas(arrayProperty, columns, sheetState, markDirty: true, forceRecompile: true);
                         Repaint();
                         GUIUtility.ExitGUI();
                     }
@@ -529,6 +547,8 @@ namespace BetterScriptable.Editor
                 if (GUILayout.Button("Add Row", GUILayout.Width(92)))
                 {
                     AddArrayRow(arrayProperty);
+                    InvalidateSheetFormulaCache(sheetState, markDirty: true);
+                    CompleteRowStructureChange(arrayProperty, columnsChanged: false, sheetState);
                 }
 
                 if (GUILayout.Button("Clear", GUILayout.Width(72))
@@ -536,6 +556,7 @@ namespace BetterScriptable.Editor
                 {
                     arrayProperty.ClearArray();
                     ClearSheetCells(sheetState);
+                    InvalidateSheetFormulaCache(sheetState, markDirty: true);
                     _isDocumentDirty = true;
                 }
             }
@@ -545,11 +566,13 @@ namespace BetterScriptable.Editor
             if (size != arrayProperty.arraySize)
             {
                 arrayProperty.arraySize = size;
+                InvalidateSheetFormulaCache(sheetState, markDirty: true);
                 if (size < previousSize)
                 {
                     TrimSheetCells(sheetState, size);
-                    _isDocumentDirty = true;
                 }
+
+                _isDocumentDirty = true;
             }
         }
 
@@ -730,6 +753,7 @@ namespace BetterScriptable.Editor
                 100000f,
                 GUILayout.ExpandWidth(true),
                 GUILayout.ExpandHeight(true));
+            _tableRowViewportHeight = scrollViewRect.height;
             HandleHorizontalScrollWheel(scrollViewRect, dataWidth, dataViewportWidth, useHorizontalScroll);
 
             _propertyScroll.x = 0f;
@@ -743,11 +767,15 @@ namespace BetterScriptable.Editor
                 GUIStyle.none,
                 GUI.skin.verticalScrollbar);
             _propertyScroll.x = 0f;
+            VisibleRowRange visibleRows = CalculateVisibleRowRange(
+                arrayProperty.arraySize,
+                _propertyScroll.y,
+                scrollViewRect.height);
 
             GUILayout.BeginArea(contentRect);
             using (new EditorGUILayout.HorizontalScope(GUILayout.Height(dataHeight)))
             {
-                DrawFrozenRowHeaders(arrayProperty, sheetState, frozenWidth, rowContentHeight);
+                DrawFrozenRowHeaders(arrayProperty, sheetState, frozenWidth, rowContentHeight, visibleRows);
                 DrawScrollableRowCells(
                     arrayProperty,
                     columns,
@@ -756,7 +784,8 @@ namespace BetterScriptable.Editor
                     dataWidth,
                     dataViewportWidth,
                     dataHeight,
-                    useHorizontalScroll);
+                    useHorizontalScroll,
+                    visibleRows);
             }
             GUILayout.EndArea();
 
@@ -767,32 +796,36 @@ namespace BetterScriptable.Editor
             SerializedProperty arrayProperty,
             BetterScriptableSheetState sheetState,
             float frozenWidth,
-            float rowContentHeight)
+            float rowContentHeight,
+            VisibleRowRange visibleRows)
         {
-            using (new EditorGUILayout.VerticalScope(GUILayout.Width(frozenWidth), GUILayout.Height(rowContentHeight)))
+            Rect viewportRect = GUILayoutUtility.GetRect(
+                frozenWidth,
+                rowContentHeight,
+                GUILayout.Width(frozenWidth),
+                GUILayout.Height(rowContentHeight));
+
+            GUI.BeginGroup(viewportRect);
+            for (int row = visibleRows.StartIndex; row < visibleRows.EndIndex; row++)
             {
-                for (int row = 0; row < arrayProperty.arraySize; row++)
+                float y = CalculateGridRowY(row);
+                GUI.Label(new Rect(0f, y, RowNumberWidth, TableRowHeight), (row + 1).ToString());
+
+                if (GUI.Button(new Rect(RowNumberWidth, y, RowButtonWidth, TableRowHeight), "+"))
                 {
-                    using (new EditorGUILayout.HorizontalScope(GUILayout.Height(TableRowHeight)))
-                    {
-                        GUILayout.Label((row + 1).ToString(), GUILayout.Width(RowNumberWidth));
+                    InsertArrayRow(arrayProperty, row);
+                    ShiftSheetCellsForInsert(sheetState, row);
+                    CompleteRowStructureChange(arrayProperty, columnsChanged: false, sheetState);
+                }
 
-                        if (GUILayout.Button("+", GUILayout.Width(RowButtonWidth)))
-                        {
-                            InsertArrayRow(arrayProperty, row);
-                            ShiftSheetCellsForInsert(sheetState, row);
-                            CompleteRowStructureChange(arrayProperty, columnsChanged: false, sheetState);
-                        }
-
-                        if (GUILayout.Button("-", GUILayout.Width(RowButtonWidth)))
-                        {
-                            DeleteArrayRow(arrayProperty, row);
-                            ShiftSheetCellsForDelete(sheetState, row);
-                            CompleteRowStructureChange(arrayProperty, columnsChanged: false, sheetState);
-                        }
-                    }
+                if (GUI.Button(new Rect(RowNumberWidth + RowButtonWidth, y, RowButtonWidth, TableRowHeight), "-"))
+                {
+                    DeleteArrayRow(arrayProperty, row);
+                    ShiftSheetCellsForDelete(sheetState, row);
+                    CompleteRowStructureChange(arrayProperty, columnsChanged: false, sheetState);
                 }
             }
+            GUI.EndGroup();
         }
 
         private void DrawScrollableRowCells(
@@ -803,7 +836,8 @@ namespace BetterScriptable.Editor
             float dataWidth,
             float dataViewportWidth,
             float dataHeight,
-            bool useHorizontalScroll)
+            bool useHorizontalScroll,
+            VisibleRowRange visibleRows)
         {
             if (useHorizontalScroll)
             {
@@ -812,15 +846,23 @@ namespace BetterScriptable.Editor
                     dataHeight,
                     GUILayout.Width(dataViewportWidth),
                     GUILayout.Height(dataHeight));
-                DrawClippedTableArea(viewportRect, dataWidth, dataHeight, () =>
-                {
-                    DrawDataRows(arrayProperty, columns, formulaTargetKeys, sheetState, dataWidth);
-                });
+                DrawClippedTableRows(
+                    viewportRect,
+                    dataWidth,
+                    dataHeight,
+                    () => DrawDataRows(arrayProperty, columns, formulaTargetKeys, sheetState, dataWidth, visibleRows));
                 return;
             }
 
             _tableScroll = Vector2.zero;
-            DrawDataRows(arrayProperty, columns, formulaTargetKeys, sheetState, dataWidth);
+            Rect tableRect = GUILayoutUtility.GetRect(
+                dataWidth,
+                dataHeight,
+                GUILayout.Width(dataWidth),
+                GUILayout.Height(dataHeight));
+            GUI.BeginGroup(tableRect);
+            DrawDataRows(arrayProperty, columns, formulaTargetKeys, sheetState, dataWidth, visibleRows);
+            GUI.EndGroup();
         }
 
         private void DrawDataRows(
@@ -828,19 +870,30 @@ namespace BetterScriptable.Editor
             List<TableColumn> columns,
             HashSet<string> formulaTargetKeys,
             BetterScriptableSheetState sheetState,
-            float dataWidth)
+            float dataWidth,
+            VisibleRowRange visibleRows)
         {
-            using (new EditorGUILayout.VerticalScope(GUILayout.Width(dataWidth)))
+            for (int row = visibleRows.StartIndex; row < visibleRows.EndIndex; row++)
             {
-                for (int row = 0; row < arrayProperty.arraySize; row++)
-                {
-                    SerializedProperty element = arrayProperty.GetArrayElementAtIndex(row);
-                    using (new EditorGUILayout.HorizontalScope(GUILayout.Height(TableRowHeight)))
-                    {
-                        DrawRowCells(arrayProperty, element, columns, row, formulaTargetKeys, sheetState);
-                    }
-                }
+                SerializedProperty element = arrayProperty.GetArrayElementAtIndex(row);
+                DrawRowCells(
+                    new Rect(0f, CalculateGridRowY(row), dataWidth, TableRowHeight),
+                    arrayProperty,
+                    element,
+                    columns,
+                    row,
+                    formulaTargetKeys,
+                    sheetState);
             }
+        }
+
+        private void DrawClippedTableRows(Rect viewportRect, float contentWidth, float contentHeight, Action drawContent)
+        {
+            GUI.BeginGroup(viewportRect);
+            GUI.BeginGroup(new Rect(-_tableScroll.x, 0f, contentWidth, contentHeight));
+            drawContent();
+            GUI.EndGroup();
+            GUI.EndGroup();
         }
 
         private void DrawClippedTableArea(Rect viewportRect, float contentWidth, float contentHeight, Action drawContent)
@@ -894,12 +947,14 @@ namespace BetterScriptable.Editor
             }
 
             List<TableColumn> columns = GetColumns(arrayProperty);
-            ApplyFormulas(arrayProperty, columns, sheetState, markDirty: true);
+            InvalidateSheetFormulaCache(sheetState, markDirty: true);
+            ApplyFormulas(arrayProperty, columns, sheetState, markDirty: true, forceRecompile: true);
             Repaint();
             GUIUtility.ExitGUI();
         }
 
         private void DrawRowCells(
+            Rect rowRect,
             SerializedProperty arrayProperty,
             SerializedProperty element,
             List<TableColumn> columns,
@@ -909,10 +964,15 @@ namespace BetterScriptable.Editor
         {
             if (columns.Count == 0)
             {
-                EditorGUILayout.PropertyField(element, GUIContent.none, true, GUILayout.Width(DefaultColumnWidth));
+                EditorGUI.PropertyField(
+                    new Rect(rowRect.x, rowRect.y, DefaultColumnWidth, EditorGUIUtility.singleLineHeight),
+                    element,
+                    GUIContent.none,
+                    true);
                 return;
             }
 
+            float x = rowRect.x;
             for (int columnIndex = 0; columnIndex < columns.Count; columnIndex++)
             {
                 TableColumn column = columns[columnIndex];
@@ -920,47 +980,56 @@ namespace BetterScriptable.Editor
                 string controlName = GetCellControlName(arrayProperty.propertyPath, rowIndex, columnIndex);
                 HandleCellNavigationKey(arrayProperty, columns, rowIndex, columnIndex, formulaTargetKeys, controlName);
                 GUI.SetNextControlName(controlName);
+                Rect cellRect = new Rect(
+                    x,
+                    rowRect.y + Mathf.Max(0f, (TableRowHeight - EditorGUIUtility.singleLineHeight) * 0.5f),
+                    column.Width,
+                    EditorGUIUtility.singleLineHeight);
 
                 if (column.IsDesignField)
                 {
                     using (new EditorGUI.DisabledScope(formulaControlled))
                     {
-                        DrawDesignCell(sheetState, rowIndex, column);
+                        DrawDesignCell(cellRect, sheetState, rowIndex, column);
                     }
 
                     FocusPendingCellControl(controlName);
+                    x += column.Width;
                     continue;
                 }
 
                 SerializedProperty cell = GetCellProperty(element, column);
                 if (cell == null)
                 {
-                    GUILayout.Label("-", GUILayout.Width(column.Width));
+                    GUI.Label(cellRect, "-");
+                    x += column.Width;
                     continue;
                 }
 
                 using (new EditorGUI.DisabledScope(formulaControlled))
                 {
-                    EditorGUILayout.PropertyField(cell, GUIContent.none, true, GUILayout.Width(column.Width));
+                    EditorGUI.PropertyField(cellRect, cell, GUIContent.none, true);
                 }
 
                 FocusPendingCellControl(controlName);
+                x += column.Width;
             }
         }
 
-        private void DrawDesignCell(BetterScriptableSheetState sheetState, int rowIndex, TableColumn column)
+        private void DrawDesignCell(Rect cellRect, BetterScriptableSheetState sheetState, int rowIndex, TableColumn column)
         {
             string currentValue = GetDesignCellValue(sheetState, rowIndex, column);
             EditorGUI.BeginChangeCheck();
-            string nextValue = DrawDesignCellValue(column.TypeName, currentValue, column.Width);
+            string nextValue = DrawDesignCellValue(cellRect, column.TypeName, currentValue);
             if (EditorGUI.EndChangeCheck())
             {
                 SetDesignCellValue(sheetState, rowIndex, column, nextValue);
                 _isDocumentDirty = true;
+                MarkSheetFormulasDirty(sheetState);
             }
         }
 
-        private static string DrawDesignCellValue(string typeName, string value, float width)
+        private static string DrawDesignCellValue(Rect cellRect, string typeName, string value)
         {
             string normalizedType = NormalizeTypeName(typeName);
             switch (normalizedType)
@@ -972,29 +1041,29 @@ namespace BetterScriptable.Editor
                 case "int":
                 case "uint":
                     int intValue = ParseInt(value);
-                    intValue = EditorGUILayout.IntField(intValue, GUILayout.Width(width));
+                    intValue = EditorGUI.IntField(cellRect, intValue);
                     return intValue.ToString(CultureInfo.InvariantCulture);
                 case "long":
                 case "ulong":
                     long longValue = ParseLong(value);
-                    longValue = EditorGUILayout.LongField(longValue, GUILayout.Width(width));
+                    longValue = EditorGUI.LongField(cellRect, longValue);
                     return longValue.ToString(CultureInfo.InvariantCulture);
                 case "float":
                     float floatValue = ParseFloat(value);
-                    floatValue = EditorGUILayout.FloatField(floatValue, GUILayout.Width(width));
+                    floatValue = EditorGUI.FloatField(cellRect, floatValue);
                     return floatValue.ToString(CultureInfo.InvariantCulture);
                 case "double":
                 case "decimal":
                     double doubleValue = ParseDouble(value);
-                    doubleValue = EditorGUILayout.DoubleField(doubleValue, GUILayout.Width(width));
+                    doubleValue = EditorGUI.DoubleField(cellRect, doubleValue);
                     return doubleValue.ToString(CultureInfo.InvariantCulture);
                 case "bool":
                 case "boolean":
                     bool boolValue = ParseBool(value);
-                    boolValue = EditorGUILayout.Toggle(boolValue, GUILayout.Width(width));
+                    boolValue = EditorGUI.Toggle(cellRect, boolValue);
                     return boolValue.ToString();
                 default:
-                    return EditorGUILayout.TextField(value ?? string.Empty, GUILayout.Width(width));
+                    return EditorGUI.TextField(cellRect, value ?? string.Empty);
             }
         }
 
@@ -1022,9 +1091,10 @@ namespace BetterScriptable.Editor
                         columnIndex + direction,
                         direction,
                         formulaTargetKeys,
-                        out string targetControlName))
+                        out string targetControlName,
+                        out int targetRowIndex))
                 {
-                    RequestCellFocus(targetControlName);
+                    RequestCellFocus(targetControlName, targetRowIndex);
                     current.Use();
                 }
 
@@ -1041,9 +1111,10 @@ namespace BetterScriptable.Editor
                         columnIndex,
                         direction,
                         formulaTargetKeys,
-                        out string targetControlName))
+                        out string targetControlName,
+                        out int targetRowIndex))
                 {
-                    RequestCellFocus(targetControlName);
+                    RequestCellFocus(targetControlName, targetRowIndex);
                     current.Use();
                 }
             }
@@ -1054,6 +1125,36 @@ namespace BetterScriptable.Editor
             _pendingCellFocusControlName = controlName;
             ClearTextFieldFocus();
             Repaint();
+        }
+
+        private void RequestCellFocus(string controlName, int rowIndex)
+        {
+            _pendingCellFocusControlName = controlName;
+            ScrollRowIntoView(rowIndex);
+            ClearTextFieldFocus();
+            Repaint();
+        }
+
+        private void ScrollRowIntoView(int rowIndex)
+        {
+            if (rowIndex < 0 || _tableRowViewportHeight <= 0f)
+            {
+                return;
+            }
+
+            float rowTop = CalculateGridRowY(rowIndex);
+            float rowBottom = rowTop + TableRowHeight;
+            if (rowTop < _propertyScroll.y)
+            {
+                _propertyScroll.y = rowTop;
+                return;
+            }
+
+            float viewportBottom = _propertyScroll.y + _tableRowViewportHeight;
+            if (rowBottom > viewportBottom)
+            {
+                _propertyScroll.y = Mathf.Max(0f, rowBottom - _tableRowViewportHeight);
+            }
         }
 
         private void FocusPendingCellControl(string controlName)
@@ -1077,9 +1178,11 @@ namespace BetterScriptable.Editor
             int startColumnIndex,
             int direction,
             HashSet<string> formulaTargetKeys,
-            out string controlName)
+            out string controlName,
+            out int targetRowIndex)
         {
             controlName = string.Empty;
+            targetRowIndex = -1;
             for (int columnIndex = startColumnIndex;
                 columnIndex >= 0 && columnIndex < columns.Count;
                 columnIndex += direction)
@@ -1087,6 +1190,7 @@ namespace BetterScriptable.Editor
                 if (IsEditableCell(arrayProperty, columns, rowIndex, columnIndex, formulaTargetKeys))
                 {
                     controlName = GetCellControlName(arrayProperty.propertyPath, rowIndex, columnIndex);
+                    targetRowIndex = rowIndex;
                     return true;
                 }
             }
@@ -1101,9 +1205,11 @@ namespace BetterScriptable.Editor
             int columnIndex,
             int direction,
             HashSet<string> formulaTargetKeys,
-            out string controlName)
+            out string controlName,
+            out int targetRowIndex)
         {
             controlName = string.Empty;
+            targetRowIndex = -1;
             for (int rowIndex = startRowIndex;
                 rowIndex >= 0 && rowIndex < arrayProperty.arraySize;
                 rowIndex += direction)
@@ -1111,6 +1217,7 @@ namespace BetterScriptable.Editor
                 if (IsEditableCell(arrayProperty, columns, rowIndex, columnIndex, formulaTargetKeys))
                 {
                     controlName = GetCellControlName(arrayProperty.propertyPath, rowIndex, columnIndex);
+                    targetRowIndex = rowIndex;
                     return true;
                 }
             }
@@ -1190,7 +1297,7 @@ namespace BetterScriptable.Editor
             int rowIndex,
             TableColumn column)
         {
-            BetterScriptableCellState cell = FindSheetCell(sheetState, rowIndex, column.SchemaName);
+            BetterScriptableCellState cell = FindSheetCell(sheetState, rowIndex, column);
             return cell?.Value ?? string.Empty;
         }
 
@@ -1210,12 +1317,13 @@ namespace BetterScriptable.Editor
                 sheetState.Cells = Array.Empty<BetterScriptableCellState>();
             }
 
-            BetterScriptableCellState cell = FindSheetCell(sheetState, rowIndex, column.SchemaName);
+            BetterScriptableCellState cell = FindSheetCell(sheetState, rowIndex, column);
             if (cell == null)
             {
                 cell = new BetterScriptableCellState
                 {
                     Row = rowIndex,
+                    ColumnId = column.FieldId,
                     ColumnName = column.SchemaName
                 };
 
@@ -1229,13 +1337,14 @@ namespace BetterScriptable.Editor
         private static BetterScriptableCellState FindSheetCell(
             BetterScriptableSheetState sheetState,
             int rowIndex,
-            string columnName)
+            TableColumn column)
         {
-            if (sheetState?.Cells == null || string.IsNullOrEmpty(columnName))
+            if (sheetState?.Cells == null)
             {
                 return null;
             }
 
+            BetterScriptableCellState fallbackCell = null;
             foreach (BetterScriptableCellState cell in sheetState.Cells)
             {
                 if (cell == null)
@@ -1243,13 +1352,51 @@ namespace BetterScriptable.Editor
                     continue;
                 }
 
-                if (cell.Row == rowIndex && string.Equals(cell.ColumnName, columnName, StringComparison.Ordinal))
+                if (cell.Row != rowIndex)
                 {
+                    continue;
+                }
+
+                if (!string.IsNullOrEmpty(column.FieldId)
+                    && string.Equals(cell.ColumnId, column.FieldId, StringComparison.Ordinal))
+                {
+                    BackfillSheetCellIdentity(cell, column);
                     return cell;
+                }
+
+                if (fallbackCell == null
+                    && !string.IsNullOrEmpty(column.SchemaName)
+                    && string.Equals(cell.ColumnName, column.SchemaName, StringComparison.Ordinal))
+                {
+                    fallbackCell = cell;
                 }
             }
 
-            return null;
+            if (fallbackCell != null)
+            {
+                BackfillSheetCellIdentity(fallbackCell, column);
+            }
+
+            return fallbackCell;
+        }
+
+        private static void BackfillSheetCellIdentity(BetterScriptableCellState cell, TableColumn column)
+        {
+            if (cell == null)
+            {
+                return;
+            }
+
+            if (string.IsNullOrEmpty(cell.ColumnId) && !string.IsNullOrEmpty(column.FieldId))
+            {
+                cell.ColumnId = column.FieldId;
+            }
+
+            if (!string.IsNullOrEmpty(column.SchemaName)
+                && !string.Equals(cell.ColumnName, column.SchemaName, StringComparison.Ordinal))
+            {
+                cell.ColumnName = column.SchemaName;
+            }
         }
 
         private static void ClearSheetCells(BetterScriptableSheetState sheetState)
@@ -1437,6 +1584,7 @@ namespace BetterScriptable.Editor
             _workingCopy = BetterScriptableDocumentSync.CreateWorkingCopy(_document, _targetAsset);
             _serializedObject = _workingCopy == null ? null : new SerializedObject(_workingCopy);
             RefreshArrayPropertyPaths();
+            InvalidateAllFormulaSheetCaches(markDirty: true);
         }
 
         private static bool RefreshDocumentSchemaFromGeneratedFactory(
@@ -1465,11 +1613,21 @@ namespace BetterScriptable.Editor
                 return false;
             }
 
-            if (AreSchemasEqual(document.Schema, request.Schema))
+            bool changed = false;
+            if (document.Schema == null)
             {
-                return false;
+                document.Schema = new BetterScriptableDocumentSchema();
+                changed = true;
             }
 
+            changed |= BetterScriptableSchemaUtility.EnsureFieldIds(document.Schema);
+            BetterScriptableSchemaUtility.EnsureFieldIds(request.Schema);
+            if (AreSchemasEqual(document.Schema, request.Schema))
+            {
+                return changed;
+            }
+
+            changed |= MigrateDocumentForSchemaChange(document, request.Schema);
             document.Schema = request.Schema;
             return true;
         }
@@ -1519,6 +1677,8 @@ namespace BetterScriptable.Editor
                     sheet.Cells = Array.Empty<BetterScriptableCellState>();
                     changed = true;
                 }
+
+                changed |= EnsureSheetCellsUseFieldIds(sheet, table);
             }
 
             if (changed)
@@ -1549,6 +1709,482 @@ namespace BetterScriptable.Editor
             return null;
         }
 
+        private static bool MigrateDocumentForSchemaChange(
+            BetterScriptableDocument document,
+            BetterScriptableDocumentSchema nextSchema)
+        {
+            if (document == null || document.Schema == null || nextSchema == null)
+            {
+                return false;
+            }
+
+            bool changed = false;
+            changed |= MigrateSerializedAssetJsonForSchemaChange(document, document.Schema, nextSchema);
+            changed |= MigrateSheetCellsForSchemaChange(document, document.Schema, nextSchema);
+            return changed;
+        }
+
+        private static bool MigrateSerializedAssetJsonForSchemaChange(
+            BetterScriptableDocument document,
+            BetterScriptableDocumentSchema previousSchema,
+            BetterScriptableDocumentSchema nextSchema)
+        {
+            if (string.IsNullOrEmpty(document.SerializedAssetJson))
+            {
+                return false;
+            }
+
+            bool changed = false;
+            string json = document.SerializedAssetJson;
+            changed |= RenameJsonPropertiesForFields(
+                ref json,
+                previousSchema.Fields,
+                nextSchema.Fields,
+                normalizeUnchangedNames: false);
+
+            BetterScriptableSchemaTable[] previousTables = previousSchema.Tables ?? Array.Empty<BetterScriptableSchemaTable>();
+            foreach (BetterScriptableSchemaTable previousTable in previousTables)
+            {
+                BetterScriptableSchemaTable nextTable = FindMatchingTableForMigration(nextSchema, previousTable);
+                if (nextTable == null)
+                {
+                    continue;
+                }
+
+                changed |= RenameJsonPropertiesForTable(ref json, previousTable, nextTable);
+            }
+
+            if (changed)
+            {
+                document.SerializedAssetJson = json;
+            }
+
+            return changed;
+        }
+
+        private static bool RenameJsonPropertiesForTable(
+            ref string json,
+            BetterScriptableSchemaTable previousTable,
+            BetterScriptableSchemaTable nextTable)
+        {
+            if (previousTable == null || nextTable == null)
+            {
+                return false;
+            }
+
+            bool changed = false;
+            foreach (string arrayPropertyName in GetSerializedPropertyNameCandidates(previousTable.FieldName))
+            {
+                if (!TryFindJsonArrayProperty(json, arrayPropertyName, out int arrayStart, out int arrayEnd))
+                {
+                    continue;
+                }
+
+                string arrayJson = json.Substring(arrayStart, arrayEnd - arrayStart + 1);
+                if (RenameJsonPropertiesForFields(
+                        ref arrayJson,
+                        previousTable.Fields,
+                        nextTable.Fields,
+                        normalizeUnchangedNames: true))
+                {
+                    json = json.Substring(0, arrayStart)
+                        + arrayJson
+                        + json.Substring(arrayEnd + 1);
+                    changed = true;
+                }
+
+                break;
+            }
+
+            if (!string.Equals(previousTable.FieldName, nextTable.FieldName, StringComparison.Ordinal))
+            {
+                string nextPropertyName = BetterScriptableNameUtility.ToSerializedFieldName(nextTable.FieldName);
+                foreach (string previousPropertyName in GetSerializedPropertyNameCandidates(previousTable.FieldName))
+                {
+                    changed |= RenameJsonProperty(ref json, previousPropertyName, nextPropertyName);
+                }
+            }
+
+            return changed;
+        }
+
+        private static bool RenameJsonPropertiesForFields(
+            ref string json,
+            BetterScriptableSchemaField[] previousFields,
+            BetterScriptableSchemaField[] nextFields,
+            bool normalizeUnchangedNames)
+        {
+            if (previousFields == null || nextFields == null)
+            {
+                return false;
+            }
+
+            bool changed = false;
+            foreach (BetterScriptableSchemaField previousField in previousFields)
+            {
+                BetterScriptableSchemaField nextField = FindFieldById(nextFields, previousField?.Id);
+                if (nextField == null
+                    || previousField == null
+                    || (!normalizeUnchangedNames
+                        && string.Equals(previousField.Name, nextField.Name, StringComparison.Ordinal)))
+                {
+                    continue;
+                }
+
+                string nextPropertyName = BetterScriptableNameUtility.ToSerializedFieldName(nextField.Name);
+                foreach (string previousPropertyName in GetSerializedPropertyNameCandidates(previousField.Name))
+                {
+                    changed |= RenameJsonProperty(ref json, previousPropertyName, nextPropertyName);
+                }
+            }
+
+            return changed;
+        }
+
+        private static bool TryFindJsonArrayProperty(
+            string json,
+            string propertyName,
+            out int arrayStart,
+            out int arrayEnd)
+        {
+            arrayStart = -1;
+            arrayEnd = -1;
+            if (string.IsNullOrEmpty(json) || string.IsNullOrEmpty(propertyName))
+            {
+                return false;
+            }
+
+            string pattern = "\"" + Regex.Escape(propertyName) + "\"\\s*:\\s*\\[";
+            Match match = Regex.Match(json, pattern);
+            if (!match.Success)
+            {
+                return false;
+            }
+
+            arrayStart = json.IndexOf('[', match.Index + match.Length - 1);
+            return arrayStart >= 0 && TryFindMatchingJsonDelimiter(json, arrayStart, '[', ']', out arrayEnd);
+        }
+
+        private static bool TryFindMatchingJsonDelimiter(
+            string json,
+            int start,
+            char openDelimiter,
+            char closeDelimiter,
+            out int end)
+        {
+            end = -1;
+            int depth = 0;
+            bool inString = false;
+            bool isEscaped = false;
+
+            for (int i = start; i < json.Length; i++)
+            {
+                char current = json[i];
+                if (inString)
+                {
+                    if (isEscaped)
+                    {
+                        isEscaped = false;
+                    }
+                    else if (current == '\\')
+                    {
+                        isEscaped = true;
+                    }
+                    else if (current == '"')
+                    {
+                        inString = false;
+                    }
+
+                    continue;
+                }
+
+                if (current == '"')
+                {
+                    inString = true;
+                    continue;
+                }
+
+                if (current == openDelimiter)
+                {
+                    depth++;
+                    continue;
+                }
+
+                if (current == closeDelimiter)
+                {
+                    depth--;
+                    if (depth == 0)
+                    {
+                        end = i;
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static bool RenameJsonProperty(
+            ref string json,
+            string previousPropertyName,
+            string nextPropertyName)
+        {
+            if (string.IsNullOrEmpty(json)
+                || string.IsNullOrEmpty(previousPropertyName)
+                || string.IsNullOrEmpty(nextPropertyName)
+                || string.Equals(previousPropertyName, nextPropertyName, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            string pattern = "\"" + Regex.Escape(previousPropertyName) + "\"(?<suffix>\\s*:)";
+            string replaced = Regex.Replace(
+                json,
+                pattern,
+                match => "\"" + nextPropertyName + "\"" + match.Groups["suffix"].Value);
+            if (string.Equals(json, replaced, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            json = replaced;
+            return true;
+        }
+
+        private static IEnumerable<string> GetSerializedPropertyNameCandidates(string schemaName)
+        {
+            string serializedName = BetterScriptableNameUtility.ToSerializedFieldName(schemaName);
+            if (!string.IsNullOrEmpty(serializedName))
+            {
+                yield return serializedName;
+            }
+
+            string lowerCamelName = ToLowerCamelCase(BetterScriptableNameUtility.ToPascalCase(schemaName));
+            if (!string.IsNullOrEmpty(lowerCamelName)
+                && !string.Equals(lowerCamelName, serializedName, StringComparison.Ordinal))
+            {
+                yield return lowerCamelName;
+            }
+
+            string pascalName = BetterScriptableNameUtility.ToPascalCase(schemaName);
+            if (!string.IsNullOrEmpty(pascalName)
+                && !string.Equals(pascalName, serializedName, StringComparison.Ordinal)
+                && !string.Equals(pascalName, lowerCamelName, StringComparison.Ordinal))
+            {
+                yield return pascalName;
+            }
+        }
+
+        private static bool MigrateSheetCellsForSchemaChange(
+            BetterScriptableDocument document,
+            BetterScriptableDocumentSchema previousSchema,
+            BetterScriptableDocumentSchema nextSchema)
+        {
+            if (document.Sheets == null || previousSchema?.Tables == null)
+            {
+                return false;
+            }
+
+            bool changed = false;
+            foreach (BetterScriptableSchemaTable previousTable in previousSchema.Tables)
+            {
+                BetterScriptableSchemaTable nextTable = FindMatchingTableForMigration(nextSchema, previousTable);
+                if (nextTable == null)
+                {
+                    continue;
+                }
+
+                foreach (BetterScriptableSheetState sheet in document.Sheets)
+                {
+                    if (sheet == null || !IsSameSchemaName(sheet.ArrayFieldName, previousTable.FieldName))
+                    {
+                        continue;
+                    }
+
+                    if (!string.Equals(sheet.ArrayFieldName, nextTable.FieldName, StringComparison.Ordinal))
+                    {
+                        sheet.ArrayFieldName = nextTable.FieldName;
+                        changed = true;
+                    }
+
+                    changed |= MigrateSheetCellsForTableChange(sheet, previousTable, nextTable);
+                }
+            }
+
+            return changed;
+        }
+
+        private static bool MigrateSheetCellsForTableChange(
+            BetterScriptableSheetState sheet,
+            BetterScriptableSchemaTable previousTable,
+            BetterScriptableSchemaTable nextTable)
+        {
+            if (sheet?.Cells == null)
+            {
+                return false;
+            }
+
+            bool changed = false;
+            foreach (BetterScriptableCellState cell in sheet.Cells)
+            {
+                if (cell == null)
+                {
+                    continue;
+                }
+
+                if (string.IsNullOrEmpty(cell.ColumnId))
+                {
+                    BetterScriptableSchemaField previousField = FindFieldByName(previousTable.Fields, cell.ColumnName);
+                    if (previousField != null)
+                    {
+                        cell.ColumnId = previousField.Id;
+                        changed = true;
+                    }
+                }
+
+                BetterScriptableSchemaField nextField = FindFieldById(nextTable.Fields, cell.ColumnId);
+                if (nextField != null
+                    && !string.Equals(cell.ColumnName, nextField.Name, StringComparison.Ordinal))
+                {
+                    cell.ColumnName = nextField.Name;
+                    changed = true;
+                }
+            }
+
+            return changed;
+        }
+
+        private static bool EnsureSheetCellsUseFieldIds(
+            BetterScriptableSheetState sheet,
+            BetterScriptableSchemaTable table)
+        {
+            if (sheet?.Cells == null || table?.Fields == null)
+            {
+                return false;
+            }
+
+            bool changed = false;
+            foreach (BetterScriptableCellState cell in sheet.Cells)
+            {
+                if (cell == null)
+                {
+                    continue;
+                }
+
+                BetterScriptableSchemaField field = FindFieldById(table.Fields, cell.ColumnId)
+                    ?? FindFieldByName(table.Fields, cell.ColumnName);
+                if (field == null)
+                {
+                    continue;
+                }
+
+                if (!string.Equals(cell.ColumnId, field.Id, StringComparison.Ordinal))
+                {
+                    cell.ColumnId = field.Id;
+                    changed = true;
+                }
+
+                if (!string.Equals(cell.ColumnName, field.Name, StringComparison.Ordinal))
+                {
+                    cell.ColumnName = field.Name;
+                    changed = true;
+                }
+            }
+
+            return changed;
+        }
+
+        private static BetterScriptableSchemaTable FindMatchingTableForMigration(
+            BetterScriptableDocumentSchema schema,
+            BetterScriptableSchemaTable previousTable)
+        {
+            if (schema?.Tables == null || previousTable == null)
+            {
+                return null;
+            }
+
+            foreach (BetterScriptableSchemaTable table in schema.Tables)
+            {
+                if (table != null && string.Equals(table.FieldName, previousTable.FieldName, StringComparison.Ordinal))
+                {
+                    return table;
+                }
+            }
+
+            foreach (BetterScriptableSchemaTable table in schema.Tables)
+            {
+                if (table != null && IsSameSchemaName(table.FieldName, previousTable.FieldName))
+                {
+                    return table;
+                }
+            }
+
+            foreach (BetterScriptableSchemaTable table in schema.Tables)
+            {
+                if (table != null && string.Equals(table.RowTypeName, previousTable.RowTypeName, StringComparison.Ordinal))
+                {
+                    return table;
+                }
+            }
+
+            return null;
+        }
+
+        private static BetterScriptableSchemaField FindFieldById(
+            BetterScriptableSchemaField[] fields,
+            string fieldId)
+        {
+            if (fields == null || string.IsNullOrEmpty(fieldId))
+            {
+                return null;
+            }
+
+            foreach (BetterScriptableSchemaField field in fields)
+            {
+                if (field != null && string.Equals(field.Id, fieldId, StringComparison.Ordinal))
+                {
+                    return field;
+                }
+            }
+
+            return null;
+        }
+
+        private static BetterScriptableSchemaField FindFieldByName(
+            BetterScriptableSchemaField[] fields,
+            string fieldName)
+        {
+            if (fields == null || string.IsNullOrEmpty(fieldName))
+            {
+                return null;
+            }
+
+            foreach (BetterScriptableSchemaField field in fields)
+            {
+                if (field == null)
+                {
+                    continue;
+                }
+
+                if (string.Equals(field.Name, fieldName, StringComparison.Ordinal)
+                    || string.Equals(BetterScriptableNameUtility.ToSerializedFieldName(field.Name), fieldName, StringComparison.Ordinal)
+                    || IsSameSchemaName(field.Name, fieldName))
+                {
+                    return field;
+                }
+            }
+
+            return null;
+        }
+
+        private static bool IsSameSchemaName(string left, string right)
+        {
+            return string.Equals(
+                BetterScriptableNameUtility.ToPascalCase(left ?? string.Empty),
+                BetterScriptableNameUtility.ToPascalCase(right ?? string.Empty),
+                StringComparison.Ordinal);
+        }
+
         private static bool AreSchemasEqual(
             BetterScriptableDocumentSchema left,
             BetterScriptableDocumentSchema right)
@@ -1557,7 +2193,7 @@ namespace BetterScriptable.Editor
                 == JsonUtility.ToJson(right ?? new BetterScriptableDocumentSchema());
         }
 
-        private bool ApplySelectedSheetFormulas()
+        private bool ApplySelectedSheetFormulasIfDirty(bool force = false)
         {
             if (_serializedObject == null
                 || _arrayPropertyPaths.Count == 0
@@ -1576,7 +2212,18 @@ namespace BetterScriptable.Editor
 
             List<TableColumn> columns = GetColumns(arrayProperty);
             BetterScriptableSheetState sheetState = GetOrCreateSheetState(arrayProperty);
-            return ApplyFormulas(arrayProperty, columns, sheetState, markDirty: false);
+            if (!force && !IsSheetFormulaDirty(sheetState))
+            {
+                return false;
+            }
+
+            bool changed = ApplyFormulas(arrayProperty, columns, sheetState, markDirty: false);
+            if (string.IsNullOrEmpty(_formulaError))
+            {
+                _dirtyFormulaSheets.Remove(sheetState);
+            }
+
+            return changed;
         }
 
         private bool TryApplyAllSheetFormulas(out string error)
@@ -1598,14 +2245,16 @@ namespace BetterScriptable.Editor
                     continue;
                 }
 
-                List<TableColumn> columns = GetColumns(arrayProperty);
-                BetterScriptableSheetState sheetState = GetOrCreateSheetState(arrayProperty);
-                if (!TryApplyFormulaSet(arrayProperty, columns, sheetState, out _, out error))
-                {
-                    _formulaError = error;
-                    return false;
-                }
+            List<TableColumn> columns = GetColumns(arrayProperty);
+            BetterScriptableSheetState sheetState = GetOrCreateSheetState(arrayProperty);
+            if (!TryApplyFormulaSet(arrayProperty, columns, sheetState, forceRecompile: false, out _, out error))
+            {
+                _formulaError = error;
+                return false;
             }
+
+            _dirtyFormulaSheets.Remove(sheetState);
+        }
 
             _serializedObject.ApplyModifiedProperties();
             _formulaError = string.Empty;
@@ -1616,15 +2265,17 @@ namespace BetterScriptable.Editor
             SerializedProperty arrayProperty,
             List<TableColumn> columns,
             BetterScriptableSheetState sheetState,
-            bool markDirty)
+            bool markDirty,
+            bool forceRecompile = false)
         {
-            if (!TryApplyFormulaSet(arrayProperty, columns, sheetState, out bool changed, out string error))
+            if (!TryApplyFormulaSet(arrayProperty, columns, sheetState, forceRecompile, out bool changed, out string error))
             {
                 _formulaError = error;
                 return false;
             }
 
             _formulaError = string.Empty;
+            _dirtyFormulaSheets.Remove(sheetState);
             if (changed)
             {
                 _serializedObject.ApplyModifiedProperties();
@@ -1638,10 +2289,11 @@ namespace BetterScriptable.Editor
             return changed;
         }
 
-        private static bool TryApplyFormulaSet(
+        private bool TryApplyFormulaSet(
             SerializedProperty arrayProperty,
             List<TableColumn> columns,
             BetterScriptableSheetState sheetState,
+            bool forceRecompile,
             out bool changed,
             out string error)
         {
@@ -1652,13 +2304,189 @@ namespace BetterScriptable.Editor
                 return true;
             }
 
-            changed = BetterScriptableFormulaEngine.TryApply(
+            FormulaSheetCache cache = GetOrCreateFormulaSheetCache(
+                sheetState,
+                arrayProperty.arraySize,
+                columns,
+                forceRecompile,
+                out error);
+            if (cache == null)
+            {
+                return false;
+            }
+
+            changed = BetterScriptableFormulaEngine.TryApplyCompiled(
                 arrayProperty,
-                GetColumnPropertyNames(columns),
-                sheetState.Formulas,
+                cache.ColumnPropertyNames,
+                cache.CompiledFormulas,
                 new DesignFormulaCellStore(sheetState, columns),
                 out error);
             return string.IsNullOrEmpty(error);
+        }
+
+        private FormulaSheetCache GetOrCreateFormulaSheetCache(
+            BetterScriptableSheetState sheetState,
+            int rowCount,
+            List<TableColumn> columns,
+            bool forceRecompile,
+            out string error)
+        {
+            error = string.Empty;
+            if (sheetState == null)
+            {
+                return null;
+            }
+
+            string columnSignature = CreateColumnSignature(columns);
+            string formulaSignature = CreateFormulaSignature(sheetState.Formulas);
+            if (!forceRecompile
+                && _formulaSheetCaches.TryGetValue(sheetState, out FormulaSheetCache existingCache)
+                && existingCache.Matches(rowCount, columnSignature, formulaSignature))
+            {
+                return existingCache;
+            }
+
+            List<string> columnPropertyNames = GetColumnPropertyNames(columns);
+            if (!BetterScriptableFormulaEngine.TryCompile(
+                    columnPropertyNames,
+                    sheetState.Formulas,
+                    rowCount,
+                    out BetterScriptableFormulaEngine.CompiledFormulaSet compiledFormulas,
+                    out error))
+            {
+                return null;
+            }
+
+            FormulaSheetCache cache = new FormulaSheetCache(
+                rowCount,
+                columnSignature,
+                formulaSignature,
+                columnPropertyNames,
+                compiledFormulas);
+            _formulaSheetCaches[sheetState] = cache;
+            return cache;
+        }
+
+        private void MarkSelectedSheetFormulasDirty()
+        {
+            if (_serializedObject == null
+                || _arrayPropertyPaths.Count == 0
+                || _selectedArrayIndex < 0
+                || _selectedArrayIndex >= _arrayPropertyPaths.Count)
+            {
+                return;
+            }
+
+            SerializedProperty arrayProperty = _serializedObject.FindProperty(_arrayPropertyPaths[_selectedArrayIndex]);
+            if (arrayProperty != null)
+            {
+                MarkSheetFormulasDirty(GetOrCreateSheetState(arrayProperty));
+            }
+        }
+
+        private void MarkAllFormulaSheetsDirty()
+        {
+            if (_document?.Sheets == null)
+            {
+                return;
+            }
+
+            foreach (BetterScriptableSheetState sheet in _document.Sheets)
+            {
+                MarkSheetFormulasDirty(sheet);
+            }
+        }
+
+        private void MarkSheetFormulasDirty(BetterScriptableSheetState sheetState)
+        {
+            if (sheetState?.Formulas == null || sheetState.Formulas.Length == 0)
+            {
+                return;
+            }
+
+            _dirtyFormulaSheets.Add(sheetState);
+        }
+
+        private bool IsSheetFormulaDirty(BetterScriptableSheetState sheetState)
+        {
+            return sheetState != null && _dirtyFormulaSheets.Contains(sheetState);
+        }
+
+        private void InvalidateAllFormulaSheetCaches(bool markDirty)
+        {
+            _formulaSheetCaches.Clear();
+            if (markDirty)
+            {
+                MarkAllFormulaSheetsDirty();
+            }
+            else
+            {
+                _dirtyFormulaSheets.Clear();
+            }
+        }
+
+        private void InvalidateSheetFormulaCache(BetterScriptableSheetState sheetState, bool markDirty)
+        {
+            if (sheetState == null)
+            {
+                return;
+            }
+
+            _formulaSheetCaches.Remove(sheetState);
+            if (markDirty)
+            {
+                MarkSheetFormulasDirty(sheetState);
+            }
+            else
+            {
+                _dirtyFormulaSheets.Remove(sheetState);
+            }
+        }
+
+        private static string CreateColumnSignature(List<TableColumn> columns)
+        {
+            if (columns == null || columns.Count == 0)
+            {
+                return string.Empty;
+            }
+
+            List<string> parts = new List<string>(columns.Count);
+            foreach (TableColumn column in columns)
+            {
+                parts.Add(string.Join("|",
+                    column.FieldId ?? string.Empty,
+                    column.PropertyName ?? string.Empty,
+                    column.SchemaName ?? string.Empty,
+                    column.TypeName ?? string.Empty,
+                    column.IsDesignField ? "1" : "0"));
+            }
+
+            return string.Join("\n", parts);
+        }
+
+        private static string CreateFormulaSignature(BetterScriptableFormulaState[] formulas)
+        {
+            if (formulas == null || formulas.Length == 0)
+            {
+                return string.Empty;
+            }
+
+            List<string> parts = new List<string>(formulas.Length);
+            foreach (BetterScriptableFormulaState formula in formulas)
+            {
+                if (formula == null)
+                {
+                    parts.Add("null");
+                    continue;
+                }
+
+                parts.Add(string.Join("|",
+                    formula.Id ?? string.Empty,
+                    formula.Enabled ? "1" : "0",
+                    formula.Expression ?? string.Empty));
+            }
+
+            return string.Join("\n", parts);
         }
 
         private void DestroyWorkingCopy()
@@ -1946,7 +2774,8 @@ namespace BetterScriptable.Editor
                     displayName,
                     field.TypeName,
                     field.Name,
-                    field.IsDesignField));
+                    field.IsDesignField,
+                    field.Id));
             }
 
             return columns;
@@ -1958,7 +2787,11 @@ namespace BetterScriptable.Editor
             if (element.propertyType != SerializedPropertyType.Generic)
             {
                 string typeName = GetFriendlyTypeName(elementType) ?? GetSerializedPropertyTypeName(element);
-                columns.Add(CreateTableColumn(string.Empty, element.displayName, typeName));
+                string fieldId = BetterScriptableSchemaUtility.CreateFieldId(
+                    "serialized:" + (elementType?.FullName ?? string.Empty),
+                    element.displayName,
+                    typeName);
+                columns.Add(CreateTableColumn(string.Empty, element.displayName, typeName, fieldId: fieldId));
                 return columns;
             }
 
@@ -1976,7 +2809,11 @@ namespace BetterScriptable.Editor
 
                 FieldInfo field = elementType?.GetField(child.name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                 string typeName = GetFriendlyTypeName(field?.FieldType) ?? GetSerializedPropertyTypeName(child);
-                columns.Add(CreateTableColumn(child.name, child.displayName, typeName));
+                string fieldId = BetterScriptableSchemaUtility.CreateFieldId(
+                    "serialized:" + (elementType?.FullName ?? string.Empty),
+                    child.name,
+                    typeName);
+                columns.Add(CreateTableColumn(child.name, child.displayName, typeName, fieldId: fieldId));
             }
 
             return columns;
@@ -1993,7 +2830,12 @@ namespace BetterScriptable.Editor
             foreach (FieldInfo field in GetSerializableFields(elementType))
             {
                 string displayName = ObjectNames.NicifyVariableName(field.Name.TrimStart('_'));
-                columns.Add(CreateTableColumn(field.Name, displayName, GetFriendlyTypeName(field.FieldType)));
+                string typeName = GetFriendlyTypeName(field.FieldType);
+                string fieldId = BetterScriptableSchemaUtility.CreateFieldId(
+                    "reflection:" + elementType.FullName,
+                    field.Name,
+                    typeName);
+                columns.Add(CreateTableColumn(field.Name, displayName, typeName, fieldId: fieldId));
             }
 
             return columns;
@@ -2068,7 +2910,8 @@ namespace BetterScriptable.Editor
             string displayName,
             string typeName,
             string schemaName = "",
-            bool isDesignField = false)
+            bool isDesignField = false,
+            string fieldId = "")
         {
             string typeLabel = isDesignField && !string.IsNullOrEmpty(typeName)
                 ? $"{typeName}, design"
@@ -2081,7 +2924,8 @@ namespace BetterScriptable.Editor
                 headerLabel,
                 CalculateColumnWidth(headerLabel),
                 schemaName,
-                isDesignField);
+                isDesignField,
+                fieldId);
         }
 
         private static float CalculateFrozenRowHeaderWidth()
@@ -2115,12 +2959,38 @@ namespace BetterScriptable.Editor
             return TableHeaderHeight + EditorGUIUtility.standardVerticalSpacing;
         }
 
+        private static VisibleRowRange CalculateVisibleRowRange(int rowCount, float scrollY, float viewportHeight)
+        {
+            if (rowCount <= 0)
+            {
+                return new VisibleRowRange(0, 0);
+            }
+
+            float rowPitch = CalculateGridRowPitch();
+            int startIndex = Mathf.FloorToInt(Mathf.Max(0f, scrollY) / rowPitch) - 1;
+            startIndex = Mathf.Clamp(startIndex, 0, rowCount - 1);
+
+            int visibleCount = Mathf.CeilToInt(Mathf.Max(TableRowHeight, viewportHeight) / rowPitch) + 3;
+            int endIndex = Mathf.Clamp(startIndex + visibleCount, startIndex + 1, rowCount);
+            return new VisibleRowRange(startIndex, endIndex);
+        }
+
         private static float CalculateGridRowContentHeight(int rowCount)
         {
             int visibleRows = Mathf.Max(rowCount, 1);
             float height = visibleRows * TableRowHeight + TableLayoutPadding;
             height += Mathf.Max(0, visibleRows - 1) * EditorGUIUtility.standardVerticalSpacing;
             return height;
+        }
+
+        private static float CalculateGridRowPitch()
+        {
+            return TableRowHeight + EditorGUIUtility.standardVerticalSpacing;
+        }
+
+        private static float CalculateGridRowY(int rowIndex)
+        {
+            return rowIndex * CalculateGridRowPitch();
         }
 
         private static float CalculateDataGridViewportWidth(float frozenWidth)
@@ -2470,7 +3340,11 @@ namespace BetterScriptable.Editor
 
             foreach (BetterScriptableSheetState sheet in _document.Sheets)
             {
-                changed |= CommitFormulaDrafts(sheet);
+                if (CommitFormulaDrafts(sheet))
+                {
+                    InvalidateSheetFormulaCache(sheet, markDirty: true);
+                    changed = true;
+                }
             }
 
             if (changed)
@@ -2530,38 +3404,29 @@ namespace BetterScriptable.Editor
             return propertyNames;
         }
 
-        private static HashSet<string> GetFormulaTargetKeys(
+        private HashSet<string> GetFormulaTargetKeys(
             BetterScriptableSheetState sheetState,
             int rowCount,
             List<TableColumn> columns)
         {
-            HashSet<string> keys = new HashSet<string>();
             if (sheetState?.Formulas == null)
             {
-                return keys;
+                return new HashSet<string>();
             }
 
-            List<string> columnPropertyNames = GetColumnPropertyNames(columns);
-            foreach (BetterScriptableFormulaState formula in sheetState.Formulas)
+            FormulaSheetCache cache = GetOrCreateFormulaSheetCache(
+                sheetState,
+                rowCount,
+                columns,
+                forceRecompile: false,
+                out string error);
+            if (cache == null)
             {
-                if (formula == null
-                    || !formula.Enabled
-                    || !BetterScriptableFormulaEngine.TryCollectTargetCells(
-                        formula.Expression,
-                        columnPropertyNames,
-                        rowCount,
-                        out List<BetterScriptableCellAddress> targets))
-                {
-                    continue;
-                }
-
-                foreach (BetterScriptableCellAddress target in targets)
-                {
-                    keys.Add(GetCellKey(target.Row, target.Column));
-                }
+                _formulaError = error;
+                return new HashSet<string>();
             }
 
-            return keys;
+            return cache.TargetKeys;
         }
 
         private static string GetCellKey(int rowIndex, int columnIndex)
@@ -2637,6 +3502,53 @@ namespace BetterScriptable.Editor
             }
         }
 
+        private readonly struct VisibleRowRange
+        {
+            public readonly int StartIndex;
+            public readonly int EndIndex;
+
+            public VisibleRowRange(int startIndex, int endIndex)
+            {
+                StartIndex = startIndex;
+                EndIndex = endIndex;
+            }
+        }
+
+        private sealed class FormulaSheetCache
+        {
+            private readonly int _rowCount;
+            private readonly string _columnSignature;
+            private readonly string _formulaSignature;
+
+            public FormulaSheetCache(
+                int rowCount,
+                string columnSignature,
+                string formulaSignature,
+                List<string> columnPropertyNames,
+                BetterScriptableFormulaEngine.CompiledFormulaSet compiledFormulas)
+            {
+                _rowCount = rowCount;
+                _columnSignature = columnSignature ?? string.Empty;
+                _formulaSignature = formulaSignature ?? string.Empty;
+                ColumnPropertyNames = columnPropertyNames;
+                CompiledFormulas = compiledFormulas;
+                TargetKeys = new HashSet<string>(compiledFormulas?.TargetKeys ?? Array.Empty<string>());
+            }
+
+            public List<string> ColumnPropertyNames { get; }
+
+            public BetterScriptableFormulaEngine.CompiledFormulaSet CompiledFormulas { get; }
+
+            public HashSet<string> TargetKeys { get; }
+
+            public bool Matches(int rowCount, string columnSignature, string formulaSignature)
+            {
+                return _rowCount == rowCount
+                    && string.Equals(_columnSignature, columnSignature ?? string.Empty, StringComparison.Ordinal)
+                    && string.Equals(_formulaSignature, formulaSignature ?? string.Empty, StringComparison.Ordinal);
+            }
+        }
+
         private readonly struct TableColumn
         {
             public readonly string PropertyName;
@@ -2646,6 +3558,7 @@ namespace BetterScriptable.Editor
             public readonly float Width;
             public readonly string SchemaName;
             public readonly bool IsDesignField;
+            public readonly string FieldId;
 
             public TableColumn(
                 string propertyName,
@@ -2654,7 +3567,8 @@ namespace BetterScriptable.Editor
                 string headerLabel,
                 float width,
                 string schemaName,
-                bool isDesignField)
+                bool isDesignField,
+                string fieldId)
             {
                 PropertyName = propertyName;
                 DisplayName = displayName;
@@ -2663,6 +3577,7 @@ namespace BetterScriptable.Editor
                 Width = width;
                 SchemaName = schemaName;
                 IsDesignField = isDesignField;
+                FieldId = fieldId ?? string.Empty;
             }
         }
     }
