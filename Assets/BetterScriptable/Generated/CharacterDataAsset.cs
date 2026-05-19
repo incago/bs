@@ -16,6 +16,7 @@ namespace BetterScriptable.Generated
         [SerializeField] private float _attackCooldown;
         [SerializeField] private float _healthPoint;
         [SerializeField] private float _attackPoint;
+        [SerializeField] private BetterScriptable.NotGenerated.UserEnum _userEnum;
 
         public int Id => _id;
         public float Weight => _weight;
@@ -27,6 +28,7 @@ namespace BetterScriptable.Generated
         public float AttackCooldown => _attackCooldown;
         public float HealthPoint => _healthPoint;
         public float AttackPoint => _attackPoint;
+        public BetterScriptable.NotGenerated.UserEnum UserEnum => _userEnum;
     }
 
     [System.Serializable]

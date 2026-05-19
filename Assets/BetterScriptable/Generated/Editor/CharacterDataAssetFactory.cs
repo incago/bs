@@ -38,6 +38,7 @@ namespace BetterScriptable.Generated.Editor
                             new BetterScriptableSchemaField { Id = "field_5bca0e7beace5aac", TypeName = "float", Name = "AttackCooldown" },
                             new BetterScriptableSchemaField { Id = "field_b12897b423e37463", TypeName = "float", Name = "HealthPoint" },
                             new BetterScriptableSchemaField { Id = "field_e03f3a7f3ed6b31d", TypeName = "float", Name = "AttackPoint" },
+                            new BetterScriptableSchemaField { Id = "field_23821483e69b45f8a8eb91daf87df363", TypeName = "BetterScriptable.NotGenerated.UserEnum", Name = "UserEnum" },
                         }
                     },
                     new BetterScriptableSchemaTable

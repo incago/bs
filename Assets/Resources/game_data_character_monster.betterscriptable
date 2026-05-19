@@ -92,6 +92,12 @@
                         "TypeName": "float",
                         "Name": "AttackPoint",
                         "IsDesignField": false
+                    },
+                    {
+                        "Id": "field_23821483e69b45f8a8eb91daf87df363",
+                        "TypeName": "BetterScriptable.NotGenerated.UserEnum",
+                        "Name": "UserEnum",
+                        "IsDesignField": false
                     }
                 ]
             },
