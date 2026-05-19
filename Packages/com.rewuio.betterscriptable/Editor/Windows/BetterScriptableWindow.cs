@@ -20,6 +20,7 @@ namespace BetterScriptable.Editor
         private const float TableRowHeight = 22f;
         private const float TableHeaderHeight = TableRowHeight * 2f;
         private const float HorizontalScrollbarHeight = 16f;
+        private const float HorizontalWheelScrollSpeed = 24f;
         private const float TableLayoutPadding = 6f;
 
         private IMGUIContainer _imguiContainer;
@@ -634,6 +635,7 @@ namespace BetterScriptable.Editor
                     headerHeight,
                     GUILayout.Width(dataViewportWidth),
                     GUILayout.Height(headerHeight));
+                HandleHorizontalScrollWheel(viewportRect, dataWidth, dataViewportWidth, useHorizontalScroll);
                 DrawClippedTableArea(viewportRect, dataWidth, headerHeight, () =>
                 {
                     DrawColumnHeaderContent(columns, dataWidth, headerHeight);
@@ -721,16 +723,28 @@ namespace BetterScriptable.Editor
             float rowContentHeight = CalculateGridRowContentHeight(arrayProperty.arraySize);
             float dataHeight = rowContentHeight;
 
+            Rect scrollViewRect = GUILayoutUtility.GetRect(
+                0f,
+                100000f,
+                0f,
+                100000f,
+                GUILayout.ExpandWidth(true),
+                GUILayout.ExpandHeight(true));
+            HandleHorizontalScrollWheel(scrollViewRect, dataWidth, dataViewportWidth, useHorizontalScroll);
+
             _propertyScroll.x = 0f;
-            _propertyScroll = GUILayout.BeginScrollView(
+            Rect contentRect = new Rect(0f, 0f, frozenWidth + dataViewportWidth, dataHeight);
+            _propertyScroll = GUI.BeginScrollView(
+                scrollViewRect,
                 _propertyScroll,
+                contentRect,
                 false,
                 false,
                 GUIStyle.none,
-                GUI.skin.verticalScrollbar,
-                GUILayout.ExpandHeight(true));
+                GUI.skin.verticalScrollbar);
             _propertyScroll.x = 0f;
 
+            GUILayout.BeginArea(contentRect);
             using (new EditorGUILayout.HorizontalScope(GUILayout.Height(dataHeight)))
             {
                 DrawFrozenRowHeaders(arrayProperty, sheetState, frozenWidth, rowContentHeight);
@@ -744,8 +758,9 @@ namespace BetterScriptable.Editor
                     dataHeight,
                     useHorizontalScroll);
             }
+            GUILayout.EndArea();
 
-            GUILayout.EndScrollView();
+            GUI.EndScrollView();
         }
 
         private void DrawFrozenRowHeaders(
@@ -835,6 +850,35 @@ namespace BetterScriptable.Editor
             drawContent();
             GUILayout.EndArea();
             GUI.EndGroup();
+        }
+
+        private void HandleHorizontalScrollWheel(
+            Rect hitRect,
+            float dataWidth,
+            float dataViewportWidth,
+            bool useHorizontalScroll)
+        {
+            Event current = Event.current;
+            if (!useHorizontalScroll
+                || current.type != EventType.ScrollWheel
+                || !current.shift
+                || !hitRect.Contains(current.mousePosition))
+            {
+                return;
+            }
+
+            float scrollDelta = Mathf.Abs(current.delta.x) > Mathf.Abs(current.delta.y)
+                ? current.delta.x
+                : current.delta.y;
+            if (Mathf.Approximately(scrollDelta, 0f))
+            {
+                return;
+            }
+
+            float maxScroll = Mathf.Max(0f, dataWidth - dataViewportWidth);
+            _tableScroll.x = Mathf.Clamp(_tableScroll.x + scrollDelta * HorizontalWheelScrollSpeed, 0f, maxScroll);
+            current.Use();
+            Repaint();
         }
 
         private void CompleteRowStructureChange(
