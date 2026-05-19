@@ -13,6 +13,10 @@ BetterScriptable은 두 파일을 한 쌍으로 사용합니다.
 
 BetterScriptable Editor에서 `Save & Export`를 누르면 원본 문서를 저장하고 연결된 런타임 asset을 갱신합니다.
 
+## 프로젝트 개요
+
+![BetterScriptable 프로젝트 개요](docs/assets/betterscriptable-overview-ko.svg)
+
 ## 스크린샷
 
 ![BetterScriptable editor screenshot](screenshot01.png)

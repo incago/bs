@@ -13,6 +13,10 @@ BetterScriptable uses two files as a pair:
 
 Use `Save & Export` in the BetterScriptable Editor to save the source document and update the linked runtime asset.
 
+## Project Overview
+
+![BetterScriptable project overview](docs/assets/betterscriptable-overview-en.svg)
+
 ## Screenshots
 
 ![BetterScriptable editor screenshot](screenshot01.png)
