@@ -3,7 +3,7 @@
     "AssetGuid": "e6f29174201d44d15af4cc97c3b584fe",
     "AssetPath": "Assets/Resources/game_data_stage.asset",
     "AssetTypeName": "StageDataAsset, Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
-    "SerializedAssetJson": "{\n    \"MonoBehaviour\": {\n        \"m_Enabled\": true,\n        \"m_EditorHideFlags\": 0,\n        \"m_Name\": \"game_data_stage\",\n        \"m_EditorClassIdentifier\": \"Assembly-CSharp::StageDataAsset\",\n        \"_stageDatas\": [\n            {\n                \"_id\": 1,\n                \"_firstName\": \"aaa\",\n                \"_lastName\": \"b\",\n                \"weight\": 10.0\n            },\n            {\n                \"_id\": 2,\n                \"_firstName\": \"ccc\",\n                \"_lastName\": \"d\",\n                \"weight\": 20.0\n            }\n        ]\n    }\n}",
+    "SerializedAssetJson": "{\n    \"MonoBehaviour\": {\n        \"m_Enabled\": true,\n        \"m_EditorHideFlags\": 0,\n        \"m_Name\": \"game_data_stage\",\n        \"m_EditorClassIdentifier\": \"Assembly-CSharp::StageDataAsset\",\n        \"_stageDatas\": [\n            {\n                \"_id\": 1,\n                \"_firstName\": \"aaa\",\n                \"_lastName\": \"b\",\n                \"weight\": 10.0,\n                \"_roomDatas\": [\n                    {\n                        \"_id\": 1\n                    },\n                    {\n                        \"_id\": 2\n                    }\n                ]\n            },\n            {\n                \"_id\": 2,\n                \"_firstName\": \"ccc\",\n                \"_lastName\": \"d\",\n                \"weight\": 20.0,\n                \"_roomDatas\": [\n                    {\n                        \"_id\": 3\n                    },\n                    {\n                        \"_id\": 4\n                    }\n                ]\n            }\n        ]\n    }\n}",
     "Schema": {
         "AssetClassName": "StageDataAsset",
         "NamespaceName": "",
@@ -32,6 +32,11 @@
                     {
                         "TypeName": "float",
                         "Name": "Weight",
+                        "IsDesignField": false
+                    },
+                    {
+                        "TypeName": "RoomData[]",
+                        "Name": "RoomDatas",
                         "IsDesignField": false
                     }
                 ]
