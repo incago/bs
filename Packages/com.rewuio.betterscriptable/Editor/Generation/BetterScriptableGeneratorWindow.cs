@@ -291,22 +291,13 @@ namespace BetterScriptable.Editor
 
         private static string DrawDataFieldTypePopup(string currentTypeName)
         {
-            string normalizedCurrentTypeName = string.IsNullOrWhiteSpace(currentTypeName)
-                ? DataFieldTypeNames[0]
-                : currentTypeName.Trim();
-            int selectedIndex = Array.IndexOf(DataFieldTypeNames, normalizedCurrentTypeName);
-            string[] typeNames = DataFieldTypeNames;
-
-            if (selectedIndex < 0)
-            {
-                typeNames = new string[DataFieldTypeNames.Length + 1];
-                typeNames[0] = normalizedCurrentTypeName;
-                Array.Copy(DataFieldTypeNames, 0, typeNames, 1, DataFieldTypeNames.Length);
-                selectedIndex = 0;
-            }
-
-            selectedIndex = EditorGUILayout.Popup(selectedIndex, typeNames, GUILayout.MinWidth(90));
-            return typeNames[Mathf.Clamp(selectedIndex, 0, typeNames.Length - 1)];
+            BetterScriptableEnumTypeUtility.TypePopupOptions options =
+                BetterScriptableEnumTypeUtility.CreatePopupOptions(DataFieldTypeNames, currentTypeName);
+            int selectedIndex = EditorGUILayout.Popup(
+                options.SelectedIndex,
+                options.DisplayNames,
+                GUILayout.MinWidth(90));
+            return options.TypeNames[Mathf.Clamp(selectedIndex, 0, options.TypeNames.Length - 1)];
         }
 
         private void Generate()

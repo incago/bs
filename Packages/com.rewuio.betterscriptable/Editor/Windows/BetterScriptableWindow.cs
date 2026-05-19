@@ -1031,6 +1031,19 @@ namespace BetterScriptable.Editor
 
         private static string DrawDesignCellValue(Rect cellRect, string typeName, string value)
         {
+            if (BetterScriptableEnumTypeUtility.TryGetAnnotatedEnumType(typeName, out Type enumType))
+            {
+                string[] names = Enum.GetNames(enumType);
+                if (names.Length == 0)
+                {
+                    return value ?? string.Empty;
+                }
+
+                int selectedIndex = GetEnumIndex(names, value);
+                selectedIndex = EditorGUI.Popup(cellRect, selectedIndex, names);
+                return names[Mathf.Clamp(selectedIndex, 0, names.Length - 1)];
+            }
+
             string normalizedType = NormalizeTypeName(typeName);
             switch (normalizedType)
             {
@@ -1065,6 +1078,30 @@ namespace BetterScriptable.Editor
                 default:
                     return EditorGUI.TextField(cellRect, value ?? string.Empty);
             }
+        }
+
+        private static int GetEnumIndex(string[] names, string value)
+        {
+            if (names == null || names.Length == 0)
+            {
+                return 0;
+            }
+
+            string normalizedValue = (value ?? string.Empty).Trim();
+            for (int i = 0; i < names.Length; i++)
+            {
+                if (string.Equals(names[i], normalizedValue, StringComparison.Ordinal))
+                {
+                    return i;
+                }
+            }
+
+            if (int.TryParse(normalizedValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsedIndex))
+            {
+                return Mathf.Clamp(parsedIndex, 0, names.Length - 1);
+            }
+
+            return 0;
         }
 
         private void HandleCellNavigationKey(
@@ -2913,9 +2950,10 @@ namespace BetterScriptable.Editor
             bool isDesignField = false,
             string fieldId = "")
         {
-            string typeLabel = isDesignField && !string.IsNullOrEmpty(typeName)
-                ? $"{typeName}, design"
-                : typeName;
+            string displayTypeName = GetColumnTypeDisplayName(typeName);
+            string typeLabel = isDesignField && !string.IsNullOrEmpty(displayTypeName)
+                ? $"{displayTypeName}, design"
+                : displayTypeName;
             string headerLabel = string.IsNullOrEmpty(typeLabel) ? displayName : $"{displayName}({typeLabel})";
             return new TableColumn(
                 propertyName,
@@ -2926,6 +2964,31 @@ namespace BetterScriptable.Editor
                 schemaName,
                 isDesignField,
                 fieldId);
+        }
+
+        private static string GetColumnTypeDisplayName(string typeName)
+        {
+            if (string.IsNullOrWhiteSpace(typeName))
+            {
+                return string.Empty;
+            }
+
+            if (BetterScriptableEnumTypeUtility.TryGetAnnotatedEnumType(typeName, out Type enumType))
+            {
+                return enumType.Name;
+            }
+
+            string trimmed = typeName.Trim().Replace('+', '.');
+            const string arraySuffix = "[]";
+            if (trimmed.EndsWith(arraySuffix, StringComparison.Ordinal))
+            {
+                return GetColumnTypeDisplayName(trimmed.Substring(0, trimmed.Length - arraySuffix.Length)) + arraySuffix;
+            }
+
+            int lastDot = trimmed.LastIndexOf('.');
+            return lastDot >= 0 && lastDot + 1 < trimmed.Length
+                ? trimmed.Substring(lastDot + 1)
+                : trimmed;
         }
 
         private static float CalculateFrozenRowHeaderWidth()

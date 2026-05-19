@@ -27,3 +27,5 @@ Generated creation menus live under `Assets/Create/...` and create both files in
 Use `Save & Export` in the BetterScriptable window to save source edits into the `.betterscriptable` document and update the linked `.asset`.
 
 Formula rows can be added above each array table. Formulas can target a whole column, such as `C = A + B`, a single cell, such as `C1 = A1 + B1`, or concatenate strings, such as `D = C + '_key'`. Columns are labeled `A`, `B`, `C` and rows start at `1`.
+
+To make a user-defined enum available as a BSG data field type, mark it with `[BetterScriptableEnum]`. Only annotated enums are added to the dropdown.

@@ -133,6 +133,27 @@ D = 'cookie' + FORMAT(A, '0000')
 
 수식 결과는 `.betterscriptable` 원본 문서에 저장되고, `Save & Export`를 누르면 연결된 `.asset`에 export됩니다.
 
+## 사용자 enum 필드 타입
+
+프로젝트에서 정의한 enum을 BSG의 데이터 필드 타입 드롭다운에 표시하려면 enum에 `BetterScriptableEnumAttribute`를 붙입니다.
+
+```csharp
+using BetterScriptable;
+
+namespace Game.Data
+{
+    [BetterScriptableEnum]
+    public enum ItemCategory
+    {
+        Equipment,
+        Food,
+        Material
+    }
+}
+```
+
+어노테이션이 붙은 enum만 BSG에 표시되므로 Unity나 외부 패키지 enum이 타입 목록을 복잡하게 만들지 않습니다. 생성된 필드는 `Game.Data.ItemCategory`처럼 namespace가 포함된 enum 타입으로 저장됩니다.
+
 ## 생성된 schema 수정하기
 
 BetterScriptable로 생성했던 클래스를 다시 수정해야 하는 경우:
