@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
   <title id="title">BetterScriptable 프로젝트 개요</title>
-  <desc id="desc">BetterScriptable Generator, 생성된 C# 코드, betterscriptable과 asset 파일 쌍, 에디터, 런타임 사용 흐름을 설명하는 다이어그램입니다.</desc>
+  <desc id="desc">BetterScriptable Generator, 생성된 C# 코드, BSE에서 편집하는 betterscriptable 원본 문서, export된 런타임 asset, 게임 런타임 사용 흐름을 설명하는 다이어그램입니다.</desc>
   <defs>
     <style>
       .bg { fill: #f7fafc; }
@@ -62,20 +62,21 @@
 
   <rect x="790" y="150" width="300" height="155" class="box-yellow"/>
   <text x="940" y="194" text-anchor="middle" class="heading">*.betterscriptable</text>
-  <text x="940" y="228" text-anchor="middle" class="small">원본 데이터 문서</text>
+  <text x="940" y="228" text-anchor="middle" class="small">편집 기준 원본 문서</text>
   <text x="940" y="258" text-anchor="middle" class="small">데이터 + 수식 + 디자인필드</text>
   <text x="940" y="286" text-anchor="middle" class="small">FieldId 기반 저장</text>
 
   <rect x="790" y="365" width="300" height="135" class="box"/>
   <text x="940" y="410" text-anchor="middle" class="heading">*.asset</text>
-  <text x="940" y="444" text-anchor="middle" class="small">런타임 ScriptableObject</text>
-  <text x="940" y="474" text-anchor="middle" class="small">게임 시스템에서 읽기</text>
+  <text x="940" y="444" text-anchor="middle" class="small">Export된 런타임 산출물</text>
+  <text x="940" y="474" text-anchor="middle" class="small">BSE에서 직접 편집하지 않음</text>
 
   <path class="export" d="M940 314 V353"/>
   <rect x="840" y="318" width="200" height="30" class="pill-green"/>
-  <text x="940" y="339" text-anchor="middle" class="tiny">Save &amp; Export</text>
+  <text x="940" y="339" text-anchor="middle" class="tiny">BSE Save &amp; Export</text>
 
   <path class="arrow" d="M1104 229 H1175"/>
+  <text x="1140" y="216" text-anchor="middle" class="tiny">원본 문서 열기</text>
 
   <rect x="1195" y="150" width="335" height="350" class="box-blue"/>
   <text x="1362" y="194" text-anchor="middle" class="heading">BSE</text>
@@ -103,12 +104,10 @@
   <text x="1470" y="341" text-anchor="middle" class="tiny">c0002</text>
   <rect x="1230" y="432" width="265" height="34" class="pill-yellow"/>
   <text x="1362" y="454" text-anchor="middle" class="tiny">D = 'cookie' + FORMAT(A, '0000')</text>
-  <text x="1362" y="488" text-anchor="middle" class="small">행/열/수식 편집</text>
-
-  <path class="export" d="M1102 432 H1180"/>
-  <text x="1140" y="420" text-anchor="middle" class="tiny" fill="#25a35a">열기 / 편집</text>
+  <text x="1362" y="488" text-anchor="middle" class="small">*.betterscriptable만 편집</text>
 
   <path class="arrow" d="M1098 432 C1150 540 1240 580 1305 600"/>
+  <text x="1172" y="535" text-anchor="middle" class="tiny">런타임은 .asset 읽기</text>
   <rect x="1195" y="585" width="335" height="145" class="box-strong"/>
   <text x="1362" y="635" text-anchor="middle" class="heading">게임 런타임</text>
   <text x="1362" y="670" text-anchor="middle" class="small">읽기 전용 데이터 접근</text>
