@@ -5514,4 +5514,504 @@ MonoBehaviour:
     _healthPoint: 245
     _attackPoint: 56.05
     _userEnum: 0
-  _skillDatas: []
+  _skillDatas:
+  - _id: 10001
+    _name: Sugar Dash
+    _cost: 8
+    _cooldown: 3
+    _duration: 1
+  - _id: 10002
+    _name: Sugar Guard
+    _cost: 12
+    _cooldown: 4
+    _duration: 1.5
+  - _id: 10003
+    _name: Sugar Burst
+    _cost: 16
+    _cooldown: 5
+    _duration: 2
+  - _id: 10004
+    _name: Sugar Heal
+    _cost: 20
+    _cooldown: 6
+    _duration: 2.5
+  - _id: 10005
+    _name: Sugar Strike
+    _cost: 20
+    _cooldown: 7
+    _duration: 3
+  - _id: 10006
+    _name: Berry Shield
+    _cost: 9
+    _cooldown: 4
+    _duration: 3
+  - _id: 10007
+    _name: Berry Charm
+    _cost: 13
+    _cooldown: 5
+    _duration: 1.1
+  - _id: 10008
+    _name: Berry Song
+    _cost: 17
+    _cooldown: 4.6
+    _duration: 1.6
+  - _id: 10009
+    _name: Berry Volley
+    _cost: 17
+    _cooldown: 5.6
+    _duration: 2.1
+  - _id: 10010
+    _name: Berry Spark
+    _cost: 21
+    _cooldown: 6.6
+    _duration: 2.6
+  - _id: 10011
+    _name: Cocoa Wave
+    _cost: 10
+    _cooldown: 3.6
+    _duration: 2.6
+  - _id: 10012
+    _name: Cocoa Blessing
+    _cost: 14
+    _cooldown: 4.6
+    _duration: 3.1
+  - _id: 10013
+    _name: Cocoa Trap
+    _cost: 14
+    _cooldown: 5.6
+    _duration: 1.2
+  - _id: 10014
+    _name: Cocoa Charge
+    _cost: 18
+    _cooldown: 6.6
+    _duration: 1.7
+  - _id: 10015
+    _name: Cocoa Bloom
+    _cost: 22
+    _cooldown: 6.2
+    _duration: 2.2
+  - _id: 10016
+    _name: Cream Rush
+    _cost: 11
+    _cooldown: 3.2
+    _duration: 2.2
+  - _id: 10017
+    _name: Cream Echo
+    _cost: 11
+    _cooldown: 4.2
+    _duration: 2.7
+  - _id: 10018
+    _name: Cream Flare
+    _cost: 15
+    _cooldown: 5.2
+    _duration: 3.2
+  - _id: 10019
+    _name: Cream Step
+    _cost: 19
+    _cooldown: 6.2
+    _duration: 1.3
+  - _id: 10020
+    _name: Cream Roar
+    _cost: 23
+    _cooldown: 7.2
+    _duration: 1.8
+  - _id: 10021
+    _name: Honey Dash
+    _cost: 8
+    _cooldown: 4.2
+    _duration: 1.8
+  - _id: 10022
+    _name: Honey Guard
+    _cost: 12
+    _cooldown: 3.8
+    _duration: 2.3
+  - _id: 10023
+    _name: Honey Burst
+    _cost: 16
+    _cooldown: 4.8
+    _duration: 2.8
+  - _id: 10024
+    _name: Honey Heal
+    _cost: 20
+    _cooldown: 5.8
+    _duration: 3.3
+  - _id: 10025
+    _name: Honey Strike
+    _cost: 20
+    _cooldown: 6.8
+    _duration: 1.4
+  - _id: 10026
+    _name: Mint Shield
+    _cost: 9
+    _cooldown: 3.8
+    _duration: 1.4
+  - _id: 10027
+    _name: Mint Charm
+    _cost: 13
+    _cooldown: 4.8
+    _duration: 1.9
+  - _id: 10028
+    _name: Mint Song
+    _cost: 17
+    _cooldown: 5.8
+    _duration: 2.4
+  - _id: 10029
+    _name: Mint Volley
+    _cost: 17
+    _cooldown: 5.4
+    _duration: 2.9
+  - _id: 10030
+    _name: Mint Spark
+    _cost: 21
+    _cooldown: 6.4
+    _duration: 3.4
+  - _id: 10031
+    _name: Cherry Wave
+    _cost: 10
+    _cooldown: 3.4
+    _duration: 1
+  - _id: 10032
+    _name: Cherry Blessing
+    _cost: 14
+    _cooldown: 4.4
+    _duration: 1.5
+  - _id: 10033
+    _name: Cherry Trap
+    _cost: 14
+    _cooldown: 5.4
+    _duration: 2
+  - _id: 10034
+    _name: Cherry Charge
+    _cost: 18
+    _cooldown: 6.4
+    _duration: 2.5
+  - _id: 10035
+    _name: Cherry Bloom
+    _cost: 22
+    _cooldown: 7.4
+    _duration: 3
+  - _id: 10036
+    _name: Vanilla Rush
+    _cost: 11
+    _cooldown: 3
+    _duration: 3
+  - _id: 10037
+    _name: Vanilla Echo
+    _cost: 11
+    _cooldown: 4
+    _duration: 1.1
+  - _id: 10038
+    _name: Vanilla Flare
+    _cost: 15
+    _cooldown: 5
+    _duration: 1.6
+  - _id: 10039
+    _name: Vanilla Step
+    _cost: 19
+    _cooldown: 6
+    _duration: 2.1
+  - _id: 10040
+    _name: Vanilla Roar
+    _cost: 23
+    _cooldown: 7
+    _duration: 2.6
+  - _id: 10041
+    _name: Caramel Dash
+    _cost: 8
+    _cooldown: 4
+    _duration: 2.6
+  - _id: 10042
+    _name: Caramel Guard
+    _cost: 12
+    _cooldown: 5
+    _duration: 3.1
+  - _id: 10043
+    _name: Caramel Burst
+    _cost: 16
+    _cooldown: 4.6
+    _duration: 1.2
+  - _id: 10044
+    _name: Caramel Heal
+    _cost: 20
+    _cooldown: 5.6
+    _duration: 1.7
+  - _id: 10045
+    _name: Caramel Strike
+    _cost: 20
+    _cooldown: 6.6
+    _duration: 2.2
+  - _id: 10046
+    _name: Cinnamon Shield
+    _cost: 9
+    _cooldown: 3.6
+    _duration: 2.2
+  - _id: 10047
+    _name: Cinnamon Charm
+    _cost: 13
+    _cooldown: 4.6
+    _duration: 2.7
+  - _id: 10048
+    _name: Cinnamon Song
+    _cost: 17
+    _cooldown: 5.6
+    _duration: 3.2
+  - _id: 10049
+    _name: Cinnamon Volley
+    _cost: 17
+    _cooldown: 6.6
+    _duration: 1.3
+  - _id: 10050
+    _name: Cinnamon Spark
+    _cost: 21
+    _cooldown: 6.2
+    _duration: 1.8
+  - _id: 10051
+    _name: Maple Wave
+    _cost: 10
+    _cooldown: 3.2
+    _duration: 1.8
+  - _id: 10052
+    _name: Maple Blessing
+    _cost: 14
+    _cooldown: 4.2
+    _duration: 2.3
+  - _id: 10053
+    _name: Maple Trap
+    _cost: 14
+    _cooldown: 5.2
+    _duration: 2.8
+  - _id: 10054
+    _name: Maple Charge
+    _cost: 18
+    _cooldown: 6.2
+    _duration: 3.3
+  - _id: 10055
+    _name: Maple Bloom
+    _cost: 22
+    _cooldown: 7.2
+    _duration: 1.4
+  - _id: 10056
+    _name: Lemon Rush
+    _cost: 11
+    _cooldown: 4.2
+    _duration: 1.4
+  - _id: 10057
+    _name: Lemon Echo
+    _cost: 11
+    _cooldown: 3.8
+    _duration: 1.9
+  - _id: 10058
+    _name: Lemon Flare
+    _cost: 15
+    _cooldown: 4.8
+    _duration: 2.4
+  - _id: 10059
+    _name: Lemon Step
+    _cost: 19
+    _cooldown: 5.8
+    _duration: 2.9
+  - _id: 10060
+    _name: Lemon Roar
+    _cost: 23
+    _cooldown: 6.8
+    _duration: 3.4
+  - _id: 10061
+    _name: Peach Dash
+    _cost: 8
+    _cooldown: 3.8
+    _duration: 1
+  - _id: 10062
+    _name: Peach Guard
+    _cost: 12
+    _cooldown: 4.8
+    _duration: 1.5
+  - _id: 10063
+    _name: Peach Burst
+    _cost: 16
+    _cooldown: 5.8
+    _duration: 2
+  - _id: 10064
+    _name: Peach Heal
+    _cost: 20
+    _cooldown: 5.4
+    _duration: 2.5
+  - _id: 10065
+    _name: Peach Strike
+    _cost: 20
+    _cooldown: 6.4
+    _duration: 3
+  - _id: 10066
+    _name: Plum Shield
+    _cost: 9
+    _cooldown: 3.4
+    _duration: 3
+  - _id: 10067
+    _name: Plum Charm
+    _cost: 13
+    _cooldown: 4.4
+    _duration: 1.1
+  - _id: 10068
+    _name: Plum Song
+    _cost: 17
+    _cooldown: 5.4
+    _duration: 1.6
+  - _id: 10069
+    _name: Plum Volley
+    _cost: 17
+    _cooldown: 6.4
+    _duration: 2.1
+  - _id: 10070
+    _name: Plum Spark
+    _cost: 21
+    _cooldown: 7.4
+    _duration: 2.6
+  - _id: 10071
+    _name: Pumpkin Wave
+    _cost: 10
+    _cooldown: 3
+    _duration: 2.6
+  - _id: 10072
+    _name: Pumpkin Blessing
+    _cost: 14
+    _cooldown: 4
+    _duration: 3.1
+  - _id: 10073
+    _name: Pumpkin Trap
+    _cost: 14
+    _cooldown: 5
+    _duration: 1.2
+  - _id: 10074
+    _name: Pumpkin Charge
+    _cost: 18
+    _cooldown: 6
+    _duration: 1.7
+  - _id: 10075
+    _name: Pumpkin Bloom
+    _cost: 22
+    _cooldown: 7
+    _duration: 2.2
+  - _id: 10076
+    _name: Walnut Rush
+    _cost: 11
+    _cooldown: 4
+    _duration: 2.2
+  - _id: 10077
+    _name: Walnut Echo
+    _cost: 11
+    _cooldown: 5
+    _duration: 2.7
+  - _id: 10078
+    _name: Walnut Flare
+    _cost: 15
+    _cooldown: 4.6
+    _duration: 3.2
+  - _id: 10079
+    _name: Walnut Step
+    _cost: 19
+    _cooldown: 5.6
+    _duration: 1.3
+  - _id: 10080
+    _name: Walnut Roar
+    _cost: 23
+    _cooldown: 6.6
+    _duration: 1.8
+  - _id: 10081
+    _name: Rose Dash
+    _cost: 8
+    _cooldown: 3.6
+    _duration: 1.8
+  - _id: 10082
+    _name: Rose Guard
+    _cost: 12
+    _cooldown: 4.6
+    _duration: 2.3
+  - _id: 10083
+    _name: Rose Burst
+    _cost: 16
+    _cooldown: 5.6
+    _duration: 2.8
+  - _id: 10084
+    _name: Rose Heal
+    _cost: 20
+    _cooldown: 6.6
+    _duration: 3.3
+  - _id: 10085
+    _name: Rose Strike
+    _cost: 20
+    _cooldown: 6.2
+    _duration: 1.4
+  - _id: 10086
+    _name: Ginger Shield
+    _cost: 9
+    _cooldown: 3.2
+    _duration: 1.4
+  - _id: 10087
+    _name: Ginger Charm
+    _cost: 13
+    _cooldown: 4.2
+    _duration: 1.9
+  - _id: 10088
+    _name: Ginger Song
+    _cost: 17
+    _cooldown: 5.2
+    _duration: 2.4
+  - _id: 10089
+    _name: Ginger Volley
+    _cost: 17
+    _cooldown: 6.2
+    _duration: 2.9
+  - _id: 10090
+    _name: Ginger Spark
+    _cost: 21
+    _cooldown: 7.2
+    _duration: 3.4
+  - _id: 10091
+    _name: Orange Wave
+    _cost: 10
+    _cooldown: 4.2
+    _duration: 1
+  - _id: 10092
+    _name: Orange Blessing
+    _cost: 14
+    _cooldown: 3.8
+    _duration: 1.5
+  - _id: 10093
+    _name: Orange Trap
+    _cost: 14
+    _cooldown: 4.8
+    _duration: 2
+  - _id: 10094
+    _name: Orange Charge
+    _cost: 18
+    _cooldown: 5.8
+    _duration: 2.5
+  - _id: 10095
+    _name: Orange Bloom
+    _cost: 22
+    _cooldown: 6.8
+    _duration: 3
+  - _id: 10096
+    _name: Mocha Rush
+    _cost: 11
+    _cooldown: 3.8
+    _duration: 3
+  - _id: 10097
+    _name: Mocha Echo
+    _cost: 11
+    _cooldown: 4.8
+    _duration: 1.1
+  - _id: 10098
+    _name: Mocha Flare
+    _cost: 15
+    _cooldown: 5.8
+    _duration: 1.6
+  - _id: 10099
+    _name: Mocha Step
+    _cost: 19
+    _cooldown: 5.4
+    _duration: 2.1
+  - _id: 10100
+    _name: Mocha Roar
+    _cost: 23
+    _cooldown: 6.4
+    _duration: 2.6

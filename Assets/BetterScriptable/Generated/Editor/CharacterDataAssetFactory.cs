@@ -48,6 +48,10 @@ namespace BetterScriptable.Generated.Editor
                         Fields = new BetterScriptableSchemaField[]
                         {
                             new BetterScriptableSchemaField { Id = "field_84f1401280d5777f", TypeName = "int", Name = "Id" },
+                            new BetterScriptableSchemaField { Id = "field_fb1d12c6907c4c06b7a3a9968d6c85e8", TypeName = "string", Name = "Name" },
+                            new BetterScriptableSchemaField { Id = "field_c5992b76da9b4636985f312244e85aa7", TypeName = "int", Name = "Cost" },
+                            new BetterScriptableSchemaField { Id = "field_1c819ce986d0429b92b1179d3b1ca927", TypeName = "float", Name = "Cooldown" },
+                            new BetterScriptableSchemaField { Id = "field_0eb51c09d9fe44fb87775c534584b079", TypeName = "float", Name = "Duration" },
                         }
                     },
                 }

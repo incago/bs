@@ -35,8 +35,16 @@ namespace BetterScriptable.Generated
     public sealed class SkillData
     {
         [SerializeField] private int _id;
+        [SerializeField] private string _name;
+        [SerializeField] private int _cost;
+        [SerializeField] private float _cooldown;
+        [SerializeField] private float _duration;
 
         public int Id => _id;
+        public string Name => _name;
+        public int Cost => _cost;
+        public float Cooldown => _cooldown;
+        public float Duration => _duration;
     }
 
     public sealed class CharacterDataAsset : BetterScriptableAsset
