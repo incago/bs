@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
   <title id="title">SpreadAsset 프로젝트 개요</title>
-  <desc id="desc">SpreadAsset Generator, 생성된 C# 코드, SpreadAsset Editor에서 편집하는 spreadasset 원본 문서, export된 런타임 asset, 게임 런타임 사용 흐름을 설명하는 다이어그램입니다.</desc>
+  <desc id="desc">SpreadAsset Generator, 생성된 C# 코드, SpreadAsset Editor에서 편집하는 *.spreadasset 원본 문서, export된 런타임 asset, 게임 런타임 사용 흐름을 설명하는 다이어그램입니다.</desc>
   <defs>
     <style>
       .bg { fill: #f7fafc; }

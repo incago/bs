@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
   <title id="title">SpreadAsset project overview</title>
-  <desc id="desc">Workflow diagram showing SpreadAsset Generator, generated C# code, the spreadasset authoring document edited by SpreadAsset Editor, the exported runtime asset, and game runtime usage.</desc>
+  <desc id="desc">Workflow diagram showing SpreadAsset Generator, generated C# code, the *.spreadasset authoring document edited by SpreadAsset Editor, the exported runtime asset, and game runtime usage.</desc>
   <defs>
     <style>
       .bg { fill: #f7fafc; }

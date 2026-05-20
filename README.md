@@ -23,6 +23,8 @@ Use `Save & Export` in the SpreadAsset Editor to save the source document and up
 
 ![SpreadAsset spreadsheet screenshot](screenshot02.png)
 
+![SpreadAsset runtime export target inspector screenshot](screenshot03.png)
+
 ## Repository Layout
 
 ```text

@@ -23,6 +23,8 @@ SpreadAsset Editor에서 `Save & Export`를 누르면 원본 문서를 저장하
 
 ![SpreadAsset spreadsheet screenshot](screenshot02.png)
 
+![SpreadAsset 런타임 export 대상 Inspector 스크린샷](screenshot03.png)
+
 ## 저장소 구조
 
 ```text
