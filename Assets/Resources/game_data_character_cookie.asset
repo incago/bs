@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a13250ab4afa64e0ebb70c5b9d28bc0d, type: 3}
   m_Name: game_data_character_cookie
-  m_EditorClassIdentifier: Assembly-CSharp::BetterScriptable.Generated.CharacterDataAsset
+  m_EditorClassIdentifier: Assembly-CSharp::SpreadAsset.Generated.CharacterDataAsset
   _characterType: Cookie
   _characterDatas:
   - _id: 1

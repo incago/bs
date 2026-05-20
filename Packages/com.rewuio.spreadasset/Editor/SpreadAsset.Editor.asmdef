@@ -1,0 +1,19 @@
+{
+    "name": "SpreadAsset.Editor",
+    "rootNamespace": "SpreadAsset.Editor",
+    "references": [
+        "SpreadAsset.Runtime"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
+

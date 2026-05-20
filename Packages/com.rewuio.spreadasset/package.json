@@ -1,0 +1,25 @@
+{
+    "name": "com.rewuio.spreadasset",
+    "version": "0.1.0",
+    "displayName": "SpreadAsset",
+    "description": "Editor tooling that makes Unity ScriptableObject data easier to inspect, compare, and edit in table-like workflows.",
+    "unity": "6000.4",
+    "author": {
+        "name": "Rewuio"
+    },
+    "license": "UNLICENSED",
+    "keywords": [
+        "scriptableobject",
+        "editor",
+        "data",
+        "table",
+        "tooling"
+    ],
+    "samples": [
+        {
+            "displayName": "Basic",
+            "description": "Basic SpreadAsset sample assets and setup notes.",
+            "path": "Samples~/Basic"
+        }
+    ]
+}

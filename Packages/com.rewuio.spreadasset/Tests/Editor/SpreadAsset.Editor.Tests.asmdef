@@ -1,0 +1,23 @@
+{
+    "name": "SpreadAsset.Editor.Tests",
+    "rootNamespace": "SpreadAsset.Tests.Editor",
+    "references": [
+        "SpreadAsset.Runtime",
+        "SpreadAsset.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false,
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ]
+}
+

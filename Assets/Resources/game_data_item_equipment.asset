@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f203deb1ee153487fb489f2430dc157f, type: 3}
   m_Name: game_data_item_equipment
-  m_EditorClassIdentifier: Assembly-CSharp::BetterScriptable.Generated.ItemDataAsset
+  m_EditorClassIdentifier: Assembly-CSharp::SpreadAsset.Generated.ItemDataAsset
   _itemCategory: 
   _itemDatas:
   - _id: 1

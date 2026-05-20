@@ -1,7 +1,7 @@
 {
   "dependencies": {
-    "com.rewuio.betterscriptable": {
-      "version": "file:com.rewuio.betterscriptable",
+    "com.rewuio.spreadasset": {
+      "version": "file:com.rewuio.spreadasset",
       "depth": 0,
       "source": "embedded",
       "dependencies": {}
