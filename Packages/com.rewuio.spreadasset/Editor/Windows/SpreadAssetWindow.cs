@@ -43,6 +43,9 @@ namespace SpreadAsset.Editor
         private string _formulaError;
         private string _pendingFormulaFocusControlName;
         private string _pendingCellFocusControlName;
+        private string _focusedCellArrayPropertyPath;
+        private int _focusedCellRowIndex = -1;
+        private int _focusedCellColumnIndex = -1;
         private float _tableRowViewportHeight;
         private readonly Dictionary<string, string> _formulaDrafts = new Dictionary<string, string>();
         private readonly Dictionary<SpreadAssetSheetState, FormulaSheetCache> _formulaSheetCaches =
@@ -131,6 +134,7 @@ namespace SpreadAsset.Editor
             _formulaError = string.Empty;
             _pendingFormulaFocusControlName = string.Empty;
             _pendingCellFocusControlName = string.Empty;
+            ClearFocusedCell();
             _formulaDrafts.Clear();
             _formulaSheetCaches.Clear();
             _dirtyFormulaSheets.Clear();
@@ -792,6 +796,7 @@ namespace SpreadAsset.Editor
 
             _propertyScroll.x = 0f;
             Rect contentRect = new Rect(0f, 0f, frozenWidth + dataViewportWidth, dataHeight);
+            Vector2 previousScroll = _propertyScroll;
             _propertyScroll = GUI.BeginScrollView(
                 scrollViewRect,
                 _propertyScroll,
@@ -801,6 +806,11 @@ namespace SpreadAsset.Editor
                 GUIStyle.none,
                 GUI.skin.verticalScrollbar);
             _propertyScroll.x = 0f;
+            if (!Mathf.Approximately(previousScroll.y, _propertyScroll.y))
+            {
+                ReleaseCellEditorForVerticalScroll();
+            }
+
             VisibleRowRange visibleRows = CalculateVisibleRowRange(
                 arrayProperty.arraySize,
                 _propertyScroll.y,
@@ -1010,13 +1020,26 @@ namespace SpreadAsset.Editor
             if (columns.Count == 0)
             {
                 Rect fallbackCellRect = new Rect(rowRect.x, rowRect.y, DefaultColumnWidth, TableRowHeight);
-                DrawFocusedCellBackground(fallbackCellRect, hasFocusedCell && rowIndex == focusedRowIndex, false);
+                string controlName = GetCellControlName(arrayProperty.propertyPath, rowIndex, 0);
+                GUI.SetNextControlName(controlName);
+                if (TryCaptureFocusedCellFromMouseDown(arrayProperty.propertyPath, rowIndex, 0, fallbackCellRect))
+                {
+                    hasFocusedCell = true;
+                    focusedRowIndex = rowIndex;
+                    focusedColumnIndex = 0;
+                }
+
+                DrawFocusedCellBackground(
+                    fallbackCellRect,
+                    hasFocusedCell && rowIndex == focusedRowIndex,
+                    hasFocusedCell && focusedColumnIndex == 0);
                 EditorGUI.PropertyField(
                     GetCenteredCellControlRect(fallbackCellRect),
                     element,
                     GUIContent.none,
                     true);
                 DrawCellTooltip(fallbackCellRect, rowIndex, 0);
+                FocusPendingCellControl(controlName);
                 return;
             }
 
@@ -1034,6 +1057,13 @@ namespace SpreadAsset.Editor
                     column.Width,
                     TableRowHeight);
                 Rect cellRect = GetCenteredCellControlRect(cellAreaRect);
+                if (TryCaptureFocusedCellFromMouseDown(arrayProperty.propertyPath, rowIndex, columnIndex, cellAreaRect))
+                {
+                    hasFocusedCell = true;
+                    focusedRowIndex = rowIndex;
+                    focusedColumnIndex = columnIndex;
+                }
+
                 bool isFocusedRow = hasFocusedCell && rowIndex == focusedRowIndex;
                 bool isFocusedColumn = hasFocusedCell && columnIndex == focusedColumnIndex;
                 DrawFocusedCellBackground(cellAreaRect, isFocusedRow, isFocusedColumn);
@@ -1284,6 +1314,7 @@ namespace SpreadAsset.Editor
 
         private void RequestCellFocus(string controlName)
         {
+            RememberFocusedCell(controlName);
             _pendingCellFocusControlName = controlName;
             ClearTextFieldFocus();
             Repaint();
@@ -1291,6 +1322,7 @@ namespace SpreadAsset.Editor
 
         private void RequestCellFocus(string controlName, int rowIndex)
         {
+            RememberFocusedCell(controlName);
             _pendingCellFocusControlName = controlName;
             ScrollRowIntoView(rowIndex);
             ClearTextFieldFocus();
@@ -1330,7 +1362,32 @@ namespace SpreadAsset.Editor
 
             GUI.FocusControl(controlName);
             EditorGUI.FocusTextInControl(controlName);
+            RememberFocusedCell(controlName);
             _pendingCellFocusControlName = string.Empty;
+        }
+
+        private void ReleaseCellEditorForVerticalScroll()
+        {
+            if (!IsCellTextEditorActive())
+            {
+                return;
+            }
+
+            ClearTextFieldFocus();
+        }
+
+        private bool IsCellTextEditorActive()
+        {
+            string focusedControl = GUI.GetNameOfFocusedControl();
+            if (TryParseCellControlName(focusedControl, out _, out _, out _))
+            {
+                return true;
+            }
+
+            return string.IsNullOrEmpty(focusedControl)
+                && !string.IsNullOrEmpty(_focusedCellArrayPropertyPath)
+                && GUIUtility.keyboardControl != 0
+                && EditorGUIUtility.editingTextField;
         }
 
         private static bool TryFindEditableCellInRow(
@@ -1454,7 +1511,7 @@ namespace SpreadAsset.Editor
             return $"{CellControlPrefix}{arrayPropertyPath}.{rowIndex}.{columnIndex}";
         }
 
-        private static bool TryGetFocusedCellPosition(
+        private bool TryGetFocusedCellPosition(
             string arrayPropertyPath,
             out int rowIndex,
             out int columnIndex)
@@ -1462,35 +1519,131 @@ namespace SpreadAsset.Editor
             rowIndex = -1;
             columnIndex = -1;
 
+            if (!string.IsNullOrEmpty(_focusedCellArrayPropertyPath)
+                && string.Equals(_focusedCellArrayPropertyPath, arrayPropertyPath, StringComparison.Ordinal)
+                && _focusedCellRowIndex >= 0
+                && _focusedCellColumnIndex >= 0)
+            {
+                rowIndex = _focusedCellRowIndex;
+                columnIndex = _focusedCellColumnIndex;
+                return true;
+            }
+
             string focusedControl = GUI.GetNameOfFocusedControl();
-            if (string.IsNullOrEmpty(focusedControl))
+            if (TryParseCellControlName(
+                    focusedControl,
+                    out string focusedArrayPropertyPath,
+                    out rowIndex,
+                    out columnIndex)
+                && string.Equals(focusedArrayPropertyPath, arrayPropertyPath, StringComparison.Ordinal))
+            {
+                RememberFocusedCell(focusedArrayPropertyPath, rowIndex, columnIndex);
+                return true;
+            }
+
+            rowIndex = -1;
+            columnIndex = -1;
+            return false;
+        }
+
+        private bool TryCaptureFocusedCellFromMouseDown(
+            string arrayPropertyPath,
+            int rowIndex,
+            int columnIndex,
+            Rect cellRect)
+        {
+            Event current = Event.current;
+            if (current.type != EventType.MouseDown
+                || current.button != 0
+                || !cellRect.Contains(current.mousePosition))
             {
                 return false;
             }
 
-            string prefix = CellControlPrefix + arrayPropertyPath + ".";
-            if (!focusedControl.StartsWith(prefix, StringComparison.Ordinal))
+            RememberFocusedCell(arrayPropertyPath, rowIndex, columnIndex);
+            Repaint();
+            return true;
+        }
+
+        private void RememberFocusedCell(string controlName)
+        {
+            if (TryParseCellControlName(
+                    controlName,
+                    out string arrayPropertyPath,
+                    out int rowIndex,
+                    out int columnIndex))
+            {
+                RememberFocusedCell(arrayPropertyPath, rowIndex, columnIndex);
+            }
+        }
+
+        private void RememberFocusedCell(string arrayPropertyPath, int rowIndex, int columnIndex)
+        {
+            _focusedCellArrayPropertyPath = arrayPropertyPath ?? string.Empty;
+            _focusedCellRowIndex = rowIndex;
+            _focusedCellColumnIndex = columnIndex;
+        }
+
+        private void ClearFocusedCell()
+        {
+            _focusedCellArrayPropertyPath = string.Empty;
+            _focusedCellRowIndex = -1;
+            _focusedCellColumnIndex = -1;
+        }
+
+        private static bool TryParseCellControlName(
+            string controlName,
+            out string arrayPropertyPath,
+            out int rowIndex,
+            out int columnIndex)
+        {
+            arrayPropertyPath = string.Empty;
+            rowIndex = -1;
+            columnIndex = -1;
+
+            if (string.IsNullOrEmpty(controlName)
+                || !controlName.StartsWith(CellControlPrefix, StringComparison.Ordinal))
             {
                 return false;
             }
 
-            string suffix = focusedControl.Substring(prefix.Length);
-            int separatorIndex = suffix.IndexOf('.');
-            if (separatorIndex <= 0 || separatorIndex >= suffix.Length - 1)
+            string suffix = controlName.Substring(CellControlPrefix.Length);
+            int columnSeparatorIndex = suffix.LastIndexOf('.');
+            int rowSeparatorIndex = columnSeparatorIndex > 0
+                ? suffix.LastIndexOf('.', columnSeparatorIndex - 1)
+                : -1;
+            if (rowSeparatorIndex <= 0
+                || columnSeparatorIndex <= rowSeparatorIndex + 1
+                || columnSeparatorIndex >= suffix.Length - 1)
             {
                 return false;
             }
 
-            return int.TryParse(
-                    suffix.Substring(0, separatorIndex),
+            if (!int.TryParse(
+                    suffix.Substring(rowSeparatorIndex + 1, columnSeparatorIndex - rowSeparatorIndex - 1),
                     NumberStyles.Integer,
                     CultureInfo.InvariantCulture,
                     out rowIndex)
-                && int.TryParse(
-                    suffix.Substring(separatorIndex + 1),
+                || !int.TryParse(
+                    suffix.Substring(columnSeparatorIndex + 1),
                     NumberStyles.Integer,
                     CultureInfo.InvariantCulture,
-                    out columnIndex);
+                    out columnIndex))
+            {
+                rowIndex = -1;
+                columnIndex = -1;
+                return false;
+            }
+
+            if (rowIndex < 0 || columnIndex < 0)
+            {
+                rowIndex = -1;
+                columnIndex = -1;
+                return false;
+            }
+
+            arrayPropertyPath = suffix.Substring(0, rowSeparatorIndex);
+            return true;
         }
 
         private static string GetDesignCellValue(
@@ -1717,6 +1870,7 @@ namespace SpreadAsset.Editor
                 if (nextSelected && !selected)
                 {
                     _selectedArrayIndex = i;
+                    ClearFocusedCell();
                     GUI.FocusControl(null);
                     Repaint();
                 }
