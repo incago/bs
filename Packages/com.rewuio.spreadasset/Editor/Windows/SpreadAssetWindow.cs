@@ -18,11 +18,13 @@ namespace SpreadAsset.Editor
         private const float MaximumColumnWidth = 360f;
         private const float DefaultColumnWidth = MinimumColumnWidth;
         private const float FormulaRowHeight = 22f;
-        private const float TableRowHeight = 22f;
+        private const float TableRowHeight = 24f;
         private const float TableHeaderHeight = TableRowHeight * 2f;
         private const float HorizontalScrollbarHeight = 16f;
         private const float HorizontalWheelScrollSpeed = 24f;
         private const float TableLayoutPadding = 6f;
+        private const float CellControlHorizontalPadding = 4f;
+        private const string CellControlPrefix = "SpreadAsset Editor.Cell.";
 
         private IMGUIContainer _imguiContainer;
         private string _documentPath;
@@ -590,7 +592,17 @@ namespace SpreadAsset.Editor
                 ? Mathf.Clamp(_tableScroll.x, 0f, Mathf.Max(0f, dataWidth - dataViewportWidth))
                 : 0f;
 
-            DrawFrozenGridHeader(columns, dataWidth, dataViewportWidth, frozenWidth, useHorizontalScroll);
+            bool hasFocusedCell = TryGetFocusedCellPosition(
+                arrayProperty.propertyPath,
+                out int _,
+                out int focusedColumnIndex);
+            DrawFrozenGridHeader(
+                columns,
+                dataWidth,
+                dataViewportWidth,
+                frozenWidth,
+                useHorizontalScroll,
+                hasFocusedCell ? focusedColumnIndex : -1);
             DrawFrozenGridHorizontalScrollbar(frozenWidth, dataWidth, dataViewportWidth, useHorizontalScroll);
 
             if (arrayProperty.arraySize == 0)
@@ -615,13 +627,20 @@ namespace SpreadAsset.Editor
             float dataWidth,
             float dataViewportWidth,
             float frozenWidth,
-            bool useHorizontalScroll)
+            bool useHorizontalScroll,
+            int focusedColumnIndex)
         {
             float headerHeight = CalculateGridHeaderHeight();
             using (new EditorGUILayout.HorizontalScope(GUILayout.Height(headerHeight)))
             {
                 DrawFrozenGridCorner(frozenWidth, headerHeight);
-                DrawColumnHeaderCells(columns, dataWidth, dataViewportWidth, headerHeight, useHorizontalScroll);
+                DrawColumnHeaderCells(
+                    columns,
+                    dataWidth,
+                    dataViewportWidth,
+                    headerHeight,
+                    useHorizontalScroll,
+                    focusedColumnIndex);
             }
         }
 
@@ -649,7 +668,8 @@ namespace SpreadAsset.Editor
             float dataWidth,
             float dataViewportWidth,
             float headerHeight,
-            bool useHorizontalScroll)
+            bool useHorizontalScroll,
+            int focusedColumnIndex)
         {
             if (useHorizontalScroll)
             {
@@ -661,20 +681,21 @@ namespace SpreadAsset.Editor
                 HandleHorizontalScrollWheel(viewportRect, dataWidth, dataViewportWidth, useHorizontalScroll);
                 DrawClippedTableArea(viewportRect, dataWidth, headerHeight, () =>
                 {
-                    DrawColumnHeaderContent(columns, dataWidth, headerHeight);
+                    DrawColumnHeaderContent(columns, dataWidth, headerHeight, focusedColumnIndex);
                 });
             }
             else
             {
                 _tableScroll = Vector2.zero;
-                DrawColumnHeaderContent(columns, dataWidth, headerHeight);
+                DrawColumnHeaderContent(columns, dataWidth, headerHeight, focusedColumnIndex);
             }
         }
 
         private static void DrawColumnHeaderContent(
             List<TableColumn> columns,
             float dataWidth,
-            float headerHeight)
+            float headerHeight,
+            int focusedColumnIndex)
         {
             using (new EditorGUILayout.VerticalScope(GUILayout.Width(dataWidth), GUILayout.Height(headerHeight)))
             {
@@ -683,15 +704,28 @@ namespace SpreadAsset.Editor
                     for (int columnIndex = 0; columnIndex < columns.Count; columnIndex++)
                     {
                         TableColumn column = columns[columnIndex];
-                        GUILayout.Label(GetColumnName(columnIndex), EditorStyles.boldLabel, GUILayout.Width(column.Width));
+                        Rect headerRect = GUILayoutUtility.GetRect(
+                            column.Width,
+                            TableRowHeight,
+                            GUILayout.Width(column.Width),
+                            GUILayout.Height(TableRowHeight));
+                        DrawFocusedColumnHeaderBackground(headerRect, columnIndex == focusedColumnIndex);
+                        GUI.Label(headerRect, GetColumnName(columnIndex), EditorStyles.boldLabel);
                     }
                 }
 
                 using (new EditorGUILayout.HorizontalScope(GUILayout.Height(TableRowHeight)))
                 {
-                    foreach (TableColumn column in columns)
+                    for (int columnIndex = 0; columnIndex < columns.Count; columnIndex++)
                     {
-                        GUILayout.Label(column.HeaderLabel, EditorStyles.miniLabel, GUILayout.Width(column.Width));
+                        TableColumn column = columns[columnIndex];
+                        Rect headerRect = GUILayoutUtility.GetRect(
+                            column.Width,
+                            TableRowHeight,
+                            GUILayout.Width(column.Width),
+                            GUILayout.Height(TableRowHeight));
+                        DrawFocusedColumnHeaderBackground(headerRect, columnIndex == focusedColumnIndex);
+                        GUI.Label(headerRect, column.HeaderLabel, EditorStyles.miniLabel);
                     }
                 }
             }
@@ -804,11 +838,17 @@ namespace SpreadAsset.Editor
                 rowContentHeight,
                 GUILayout.Width(frozenWidth),
                 GUILayout.Height(rowContentHeight));
+            bool hasFocusedCell = TryGetFocusedCellPosition(
+                arrayProperty.propertyPath,
+                out int focusedRowIndex,
+                out int _);
 
             GUI.BeginGroup(viewportRect);
             for (int row = visibleRows.StartIndex; row < visibleRows.EndIndex; row++)
             {
                 float y = CalculateGridRowY(row);
+                Rect rowHeaderRect = new Rect(0f, y, frozenWidth, TableRowHeight);
+                DrawFocusedRowHeaderBackground(rowHeaderRect, hasFocusedCell && row == focusedRowIndex);
                 GUI.Label(new Rect(0f, y, RowNumberWidth, TableRowHeight), (row + 1).ToString());
 
                 if (GUI.Button(new Rect(RowNumberWidth, y, RowButtonWidth, TableRowHeight), "+"))
@@ -962,13 +1002,21 @@ namespace SpreadAsset.Editor
             HashSet<string> formulaTargetKeys,
             SpreadAssetSheetState sheetState)
         {
+            bool hasFocusedCell = TryGetFocusedCellPosition(
+                arrayProperty.propertyPath,
+                out int focusedRowIndex,
+                out int focusedColumnIndex);
+
             if (columns.Count == 0)
             {
+                Rect fallbackCellRect = new Rect(rowRect.x, rowRect.y, DefaultColumnWidth, TableRowHeight);
+                DrawFocusedCellBackground(fallbackCellRect, hasFocusedCell && rowIndex == focusedRowIndex, false);
                 EditorGUI.PropertyField(
-                    new Rect(rowRect.x, rowRect.y, DefaultColumnWidth, EditorGUIUtility.singleLineHeight),
+                    GetCenteredCellControlRect(fallbackCellRect),
                     element,
                     GUIContent.none,
                     true);
+                DrawCellTooltip(fallbackCellRect, rowIndex, 0);
                 return;
             }
 
@@ -980,11 +1028,15 @@ namespace SpreadAsset.Editor
                 string controlName = GetCellControlName(arrayProperty.propertyPath, rowIndex, columnIndex);
                 HandleCellNavigationKey(arrayProperty, columns, rowIndex, columnIndex, formulaTargetKeys, controlName);
                 GUI.SetNextControlName(controlName);
-                Rect cellRect = new Rect(
+                Rect cellAreaRect = new Rect(
                     x,
-                    rowRect.y + Mathf.Max(0f, (TableRowHeight - EditorGUIUtility.singleLineHeight) * 0.5f),
+                    rowRect.y,
                     column.Width,
-                    EditorGUIUtility.singleLineHeight);
+                    TableRowHeight);
+                Rect cellRect = GetCenteredCellControlRect(cellAreaRect);
+                bool isFocusedRow = hasFocusedCell && rowIndex == focusedRowIndex;
+                bool isFocusedColumn = hasFocusedCell && columnIndex == focusedColumnIndex;
+                DrawFocusedCellBackground(cellAreaRect, isFocusedRow, isFocusedColumn);
 
                 if (column.IsDesignField)
                 {
@@ -993,6 +1045,7 @@ namespace SpreadAsset.Editor
                         DrawDesignCell(cellRect, sheetState, rowIndex, column);
                     }
 
+                    DrawCellTooltip(cellAreaRect, rowIndex, columnIndex);
                     FocusPendingCellControl(controlName);
                     x += column.Width;
                     continue;
@@ -1002,6 +1055,7 @@ namespace SpreadAsset.Editor
                 if (cell == null)
                 {
                     GUI.Label(cellRect, "-");
+                    DrawCellTooltip(cellAreaRect, rowIndex, columnIndex);
                     x += column.Width;
                     continue;
                 }
@@ -1011,9 +1065,80 @@ namespace SpreadAsset.Editor
                     EditorGUI.PropertyField(cellRect, cell, GUIContent.none, true);
                 }
 
+                DrawCellTooltip(cellAreaRect, rowIndex, columnIndex);
                 FocusPendingCellControl(controlName);
                 x += column.Width;
             }
+        }
+
+        private static Rect GetCenteredCellControlRect(Rect cellAreaRect)
+        {
+            float horizontalPadding = Mathf.Min(CellControlHorizontalPadding, cellAreaRect.width * 0.5f);
+            return new Rect(
+                cellAreaRect.x + horizontalPadding,
+                cellAreaRect.y + Mathf.Max(0f, (TableRowHeight - EditorGUIUtility.singleLineHeight) * 0.5f),
+                Mathf.Max(1f, cellAreaRect.width - horizontalPadding * 2f),
+                EditorGUIUtility.singleLineHeight);
+        }
+
+        private static void DrawCellTooltip(Rect cellRect, int rowIndex, int columnIndex)
+        {
+            GUI.Label(
+                cellRect,
+                new GUIContent(string.Empty, GetCellAddress(rowIndex, columnIndex)),
+                GUIStyle.none);
+        }
+
+        private static void DrawFocusedCellBackground(Rect cellRect, bool isFocusedRow, bool isFocusedColumn)
+        {
+            if (!isFocusedRow && !isFocusedColumn)
+            {
+                return;
+            }
+
+            EditorGUI.DrawRect(cellRect, GetFocusedCellBackgroundColor(isFocusedRow, isFocusedColumn));
+        }
+
+        private static void DrawFocusedRowHeaderBackground(Rect rect, bool isFocusedRow)
+        {
+            if (isFocusedRow)
+            {
+                EditorGUI.DrawRect(rect, GetFocusedCellBackgroundColor(true, false));
+            }
+        }
+
+        private static void DrawFocusedColumnHeaderBackground(Rect rect, bool isFocusedColumn)
+        {
+            if (isFocusedColumn)
+            {
+                EditorGUI.DrawRect(rect, GetFocusedCellBackgroundColor(false, true));
+            }
+        }
+
+        private static Color GetFocusedCellBackgroundColor(bool isFocusedRow, bool isFocusedColumn)
+        {
+            if (isFocusedRow && isFocusedColumn)
+            {
+                return EditorGUIUtility.isProSkin
+                    ? new Color(0.34f, 0.57f, 0.88f, 0.34f)
+                    : new Color(0.24f, 0.47f, 0.86f, 0.22f);
+            }
+
+            if (isFocusedRow)
+            {
+                return EditorGUIUtility.isProSkin
+                    ? new Color(0.96f, 0.70f, 0.30f, 0.20f)
+                    : new Color(1.00f, 0.80f, 0.24f, 0.20f);
+            }
+
+            return EditorGUIUtility.isProSkin
+                ? new Color(0.26f, 0.58f, 0.95f, 0.18f)
+                : new Color(0.24f, 0.52f, 0.95f, 0.14f);
+        }
+
+        private static string GetCellAddress(int rowIndex, int columnIndex)
+        {
+            return GetColumnName(columnIndex) + (rowIndex + 1).ToString(CultureInfo.InvariantCulture);
         }
 
         private void DrawDesignCell(Rect cellRect, SpreadAssetSheetState sheetState, int rowIndex, TableColumn column)
@@ -1326,7 +1451,46 @@ namespace SpreadAsset.Editor
 
         private static string GetCellControlName(string arrayPropertyPath, int rowIndex, int columnIndex)
         {
-            return $"SpreadAsset Editor.Cell.{arrayPropertyPath}.{rowIndex}.{columnIndex}";
+            return $"{CellControlPrefix}{arrayPropertyPath}.{rowIndex}.{columnIndex}";
+        }
+
+        private static bool TryGetFocusedCellPosition(
+            string arrayPropertyPath,
+            out int rowIndex,
+            out int columnIndex)
+        {
+            rowIndex = -1;
+            columnIndex = -1;
+
+            string focusedControl = GUI.GetNameOfFocusedControl();
+            if (string.IsNullOrEmpty(focusedControl))
+            {
+                return false;
+            }
+
+            string prefix = CellControlPrefix + arrayPropertyPath + ".";
+            if (!focusedControl.StartsWith(prefix, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            string suffix = focusedControl.Substring(prefix.Length);
+            int separatorIndex = suffix.IndexOf('.');
+            if (separatorIndex <= 0 || separatorIndex >= suffix.Length - 1)
+            {
+                return false;
+            }
+
+            return int.TryParse(
+                    suffix.Substring(0, separatorIndex),
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out rowIndex)
+                && int.TryParse(
+                    suffix.Substring(separatorIndex + 1),
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out columnIndex);
         }
 
         private static string GetDesignCellValue(
