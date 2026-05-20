@@ -2,23 +2,27 @@
     "name": "com.rewuio.spreadasset",
     "version": "0.1.0",
     "displayName": "SpreadAsset",
-    "description": "Editor tooling that makes Unity ScriptableObject data easier to inspect, compare, and edit in table-like workflows.",
+    "description": "Spreadsheet-style authoring tools for Unity ScriptableObject data. Edit and compare arrays as sheets, then export linked runtime .asset files.",
     "unity": "6000.4",
+    "type": "tool",
     "author": {
         "name": "Rewuio"
     },
     "license": "UNLICENSED",
     "keywords": [
+        "spreadasset",
         "scriptableobject",
-        "editor",
-        "data",
+        "spreadsheet",
+        "sheet",
         "table",
-        "tooling"
+        "data-authoring",
+        "editor",
+        "unity-editor"
     ],
     "samples": [
         {
             "displayName": "Basic",
-            "description": "Basic SpreadAsset sample assets and setup notes.",
+            "description": "Basic SpreadAsset documents, generated ScriptableObject assets, and setup notes.",
             "path": "Samples~/Basic"
         }
     ]
