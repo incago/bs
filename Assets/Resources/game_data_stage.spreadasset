@@ -3,7 +3,7 @@
     "AssetGuid": "e6f29174201d44d15af4cc97c3b584fe",
     "AssetPath": "Assets/Resources/game_data_stage.asset",
     "AssetTypeName": "SpreadAsset.Generated.StageDataAsset, Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
-    "SerializedAssetJson": "{\n    \"MonoBehaviour\": {\n        \"m_Enabled\": true,\n        \"m_EditorHideFlags\": 0,\n        \"m_Name\": \"game_data_stage\",\n        \"m_EditorClassIdentifier\": \"Assembly-CSharp::StageDataAsset\",\n        \"_stageDatas\": [\n            {\n                \"_id\": 1,\n                \"_firstName\": \"aaa\",\n                \"_lastName\": \"b\",\n                \"_weight\": 10.0,\n                \"_roomDataIds\": [\n                    1,\n                    2\n                ]\n            },\n            {\n                \"_id\": 2,\n                \"_firstName\": \"ccc\",\n                \"_lastName\": \"d\",\n                \"_weight\": 20.0,\n                \"_roomDataIds\": [\n                    1,\n                    2\n                ]\n            }\n        ],\n        \"_roomDatas\": [\n            {\n                \"_id\": 1,\n                \"_name\": \"Room1\"\n            },\n            {\n                \"_id\": 2,\n                \"_name\": \"Room2\"\n            }\n        ]\n    }\n}",
+    "SerializedAssetJson": "{\n    \"MonoBehaviour\": {\n        \"m_Enabled\": true,\n        \"m_EditorHideFlags\": 0,\n        \"m_Name\": \"game_data_stage\",\n        \"m_EditorClassIdentifier\": \"Assembly-CSharp::StageDataAsset\",\n        \"_stageDatas\": [\n            {\n                \"_id\": 1,\n                \"_firstName\": \"aaa\",\n                \"_lastName\": \"b\",\n                \"_weight\": 10.0,\n                \"_roomDataIds\": [\n                    1,\n                    2\n                ]\n            },\n            {\n                \"_id\": 2,\n                \"_firstName\": \"ccc\",\n                \"_lastName\": \"d\",\n                \"_weight\": 20.0,\n                \"_roomDataIds\": [\n                    1,\n                    2\n                ]\n            },\n            {\n                \"_id\": 3,\n                \"_firstName\": \"ddd\",\n                \"_lastName\": \"e\",\n                \"_weight\": 30.0,\n                \"_roomDataIds\": []\n            }\n        ],\n        \"_roomDatas\": [\n            {\n                \"_id\": 1,\n                \"_name\": \"Room1\"\n            },\n            {\n                \"_id\": 2,\n                \"_name\": \"Room2\"\n            },\n            {\n                \"_id\": 3,\n                \"_name\": \"room3\"\n            },\n            {\n                \"_id\": 4,\n                \"_name\": \"room4\"\n            }\n        ]\n    }\n}",
     "Schema": {
         "AssetClassName": "StageDataAsset",
         "NamespaceName": "SpreadAsset.Generated",
@@ -20,7 +20,7 @@
                         "TypeName": "int",
                         "Name": "Id",
                         "IsDesignField": false,
-                        "IsKeyField": false
+                        "IsKeyField": true
                     },
                     {
                         "Id": "field_bd750a0bd349b6ac",

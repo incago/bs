@@ -23,7 +23,7 @@ namespace SpreadAsset.Generated.Editor
                         FieldName = "StageDatas",
                         Fields = new SpreadAssetSchemaField[]
                         {
-                            new SpreadAssetSchemaField { Id = "field_99738f1cc27dc9b6", TypeName = "int", Name = "Id" },
+                            new SpreadAssetSchemaField { Id = "field_99738f1cc27dc9b6", TypeName = "int", Name = "Id", IsKeyField = true },
                             new SpreadAssetSchemaField { Id = "field_bd750a0bd349b6ac", TypeName = "string", Name = "FirstName" },
                             new SpreadAssetSchemaField { Id = "field_eaa1fa9d2d6d3a6a", TypeName = "string", Name = "LastName" },
                             new SpreadAssetSchemaField { Id = "field_424352ca1d5d24a4", TypeName = "float", Name = "Weight" },

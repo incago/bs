@@ -34,10 +34,47 @@ namespace SpreadAsset.Generated
         // Paired asset creation is handled by the generated Editor factory.
         [SerializeField] private StageData[] _stageDatas = new StageData[0];
         [SerializeField] private RoomData[] _roomDatas = new RoomData[0];
+        [System.NonSerialized] private System.Collections.Generic.Dictionary<int, StageData> _stageDatasById;
         [System.NonSerialized] private System.Collections.Generic.Dictionary<int, RoomData> _roomDatasById;
 
         public StageData[] StageDatas => _stageDatas;
         public RoomData[] RoomDatas => _roomDatas;
+
+        public bool TryGetStageDataById(int key, out StageData value)
+        {
+            return GetStageDatasByIdLookup().TryGetValue(key, out value);
+        }
+
+        public StageData GetStageDataById(int key)
+        {
+            TryGetStageDataById(key, out StageData value);
+            return value;
+        }
+
+        private System.Collections.Generic.Dictionary<int, StageData> GetStageDatasByIdLookup()
+        {
+            if (_stageDatasById != null)
+            {
+                return _stageDatasById;
+            }
+
+            _stageDatasById = new System.Collections.Generic.Dictionary<int, StageData>();
+            if (_stageDatas == null)
+            {
+                return _stageDatasById;
+            }
+
+            foreach (StageData row in _stageDatas)
+            {
+                if (row == null)
+                {
+                    continue;
+                }
+                _stageDatasById[row.Id] = row;
+            }
+
+            return _stageDatasById;
+        }
 
         public bool TryGetRoomDataById(int key, out RoomData value)
         {
@@ -77,6 +114,7 @@ namespace SpreadAsset.Generated
 
         public void ClearLookupCaches()
         {
+            _stageDatasById = null;
             _roomDatasById = null;
         }
 

@@ -23,8 +23,17 @@ MonoBehaviour:
     _lastName: d
     _weight: 20
     _roomDataIds: 0100000002000000
+  - _id: 3
+    _firstName: ddd
+    _lastName: e
+    _weight: 30
+    _roomDataIds:
   _roomDatas:
   - _id: 1
     _name: Room1
   - _id: 2
     _name: Room2
+  - _id: 3
+    _name: room3
+  - _id: 4
+    _name: room4
