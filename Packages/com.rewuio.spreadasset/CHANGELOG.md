@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.2
+
+- Added SpreadAsset Generator support for data-class-only array table definitions that generate nested data classes without creating asset-level array fields.
+- Added generator field type options for primitive arrays and data classes declared in the same generated asset schema while preventing direct self-references.
+- Added key validation in SpreadAsset Editor, including duplicate/blank key warnings, invalid key cell highlighting, and export blocking when key values are not safe.
+- Improved expanded array and nested object rendering in SpreadAsset Editor with dynamic row heights and narrower responsive cell layouts.
+- Updated sample stage data to use key-based room references and generated row lookup helpers.
+
 ## 0.1.0
 
 - Added initial package structure.
