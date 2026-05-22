@@ -444,8 +444,10 @@ namespace SpreadAsset.Editor
 
             SpreadAssetSheetState sheetState = GetOrCreateSheetState(arrayProperty);
             List<TableColumn> columns = GetColumns(arrayProperty, sheetState);
+            KeyValidationResult keyValidation = ValidateKeyFields(arrayProperty, columns, sheetState);
+            DrawKeyValidationPanel(keyValidation);
             DrawArrayToolbar(arrayProperty, sheetState);
-            DrawArrayGrid(arrayProperty, columns, sheetState);
+            DrawArrayGrid(arrayProperty, columns, sheetState, keyValidation.InvalidCellKeys);
         }
 
         private void DrawFormulaPanel(
@@ -947,10 +949,239 @@ namespace SpreadAsset.Editor
             }
         }
 
-        private void DrawArrayGrid(
+        private static void DrawKeyValidationPanel(KeyValidationResult validation)
+        {
+            if (validation == null || !validation.HasErrors)
+            {
+                return;
+            }
+
+            EditorGUILayout.HelpBox(
+                "Key validation failed. The .spreadasset source can be saved, but Save & Export will not write the linked .asset until key values are unique and non-empty.\n\n"
+                + FormatKeyValidationSummary(validation, 6),
+                MessageType.Error);
+        }
+
+        private KeyValidationResult ValidateAllKeyFields()
+        {
+            KeyValidationResult result = new KeyValidationResult();
+            if (_serializedObject == null)
+            {
+                return result;
+            }
+
+            RefreshArrayPropertyPaths();
+            foreach (string arrayPropertyPath in _arrayPropertyPaths)
+            {
+                SerializedProperty arrayProperty = _serializedObject.FindProperty(arrayPropertyPath);
+                if (arrayProperty == null)
+                {
+                    continue;
+                }
+
+                SpreadAssetSheetState sheetState = GetOrCreateSheetState(arrayProperty);
+                List<TableColumn> columns = GetColumns(arrayProperty, sheetState);
+                result.Add(ValidateKeyFields(arrayProperty, columns, sheetState));
+            }
+
+            return result;
+        }
+
+        private static KeyValidationResult ValidateKeyFields(
             SerializedProperty arrayProperty,
             List<TableColumn> columns,
             SpreadAssetSheetState sheetState)
+        {
+            KeyValidationResult result = new KeyValidationResult();
+            if (arrayProperty == null || columns == null || columns.Count == 0)
+            {
+                return result;
+            }
+
+            string sheetName = GetSheetDisplayName(arrayProperty, sheetState);
+            for (int columnIndex = 0; columnIndex < columns.Count; columnIndex++)
+            {
+                TableColumn column = columns[columnIndex];
+                if (!column.IsKeyField)
+                {
+                    continue;
+                }
+
+                ValidateKeyColumn(arrayProperty, columns, sheetState, sheetName, columnIndex, result);
+            }
+
+            return result;
+        }
+
+        private static void ValidateKeyColumn(
+            SerializedProperty arrayProperty,
+            List<TableColumn> columns,
+            SpreadAssetSheetState sheetState,
+            string sheetName,
+            int columnIndex,
+            KeyValidationResult result)
+        {
+            TableColumn column = columns[columnIndex];
+            string columnName = GetCsvColumnName(column);
+            Dictionary<string, List<int>> rowsByValue = new Dictionary<string, List<int>>(StringComparer.Ordinal);
+            List<int> emptyRows = new List<int>();
+            List<int> unsupportedRows = new List<int>();
+
+            for (int rowIndex = 0; rowIndex < arrayProperty.arraySize; rowIndex++)
+            {
+                SerializedProperty element = arrayProperty.GetArrayElementAtIndex(rowIndex);
+                if (!TryGetKeyCellValue(element, column, sheetState, rowIndex, out string value))
+                {
+                    unsupportedRows.Add(rowIndex);
+                    continue;
+                }
+
+                string keyValue = NormalizeKeyValidationValue(value);
+                if (string.IsNullOrEmpty(keyValue))
+                {
+                    emptyRows.Add(rowIndex);
+                    continue;
+                }
+
+                if (!rowsByValue.TryGetValue(keyValue, out List<int> rows))
+                {
+                    rows = new List<int>();
+                    rowsByValue.Add(keyValue, rows);
+                }
+
+                rows.Add(rowIndex);
+            }
+
+            if (emptyRows.Count > 0)
+            {
+                result.AddIssue(new KeyValidationIssue(
+                    KeyValidationIssueKind.Empty,
+                    sheetName,
+                    columnName,
+                    columnIndex,
+                    string.Empty,
+                    emptyRows));
+            }
+
+            if (unsupportedRows.Count > 0)
+            {
+                result.AddIssue(new KeyValidationIssue(
+                    KeyValidationIssueKind.Unsupported,
+                    sheetName,
+                    columnName,
+                    columnIndex,
+                    string.Empty,
+                    unsupportedRows));
+            }
+
+            foreach (KeyValuePair<string, List<int>> pair in rowsByValue)
+            {
+                if (pair.Value.Count <= 1)
+                {
+                    continue;
+                }
+
+                result.AddIssue(new KeyValidationIssue(
+                    KeyValidationIssueKind.Duplicate,
+                    sheetName,
+                    columnName,
+                    columnIndex,
+                    pair.Key,
+                    pair.Value));
+            }
+        }
+
+        private static bool TryGetKeyCellValue(
+            SerializedProperty element,
+            TableColumn column,
+            SpreadAssetSheetState sheetState,
+            int rowIndex,
+            out string value)
+        {
+            value = string.Empty;
+            if (column.IsDesignField)
+            {
+                value = GetDesignCellValue(sheetState, rowIndex, column);
+                return true;
+            }
+
+            SerializedProperty cell = GetCellProperty(element, column);
+            return TryGetSerializedPropertyCsvValue(cell, out value);
+        }
+
+        private static string NormalizeKeyValidationValue(string value)
+        {
+            return (value ?? string.Empty).Trim();
+        }
+
+        private static string FormatKeyValidationSummary(KeyValidationResult validation, int maxIssues)
+        {
+            if (validation == null || validation.Issues.Count == 0)
+            {
+                return string.Empty;
+            }
+
+            int issueCount = Mathf.Min(Mathf.Max(1, maxIssues), validation.Issues.Count);
+            List<string> messages = new List<string>(issueCount + 1);
+            for (int i = 0; i < issueCount; i++)
+            {
+                messages.Add("- " + FormatKeyValidationIssue(validation.Issues[i]));
+            }
+
+            int hiddenIssueCount = validation.Issues.Count - issueCount;
+            if (hiddenIssueCount > 0)
+            {
+                messages.Add("- ... and " + hiddenIssueCount.ToString(CultureInfo.InvariantCulture) + " more.");
+            }
+
+            return string.Join("\n", messages);
+        }
+
+        private static string FormatKeyValidationIssue(KeyValidationIssue issue)
+        {
+            string location = issue.SheetName + "." + issue.ColumnName;
+            string rows = FormatKeyValidationRows(issue.Rows);
+            switch (issue.Kind)
+            {
+                case KeyValidationIssueKind.Duplicate:
+                    return location + ": duplicate key \"" + issue.KeyValue + "\" at rows " + rows + ".";
+                case KeyValidationIssueKind.Empty:
+                    return location + ": blank key at rows " + rows + ".";
+                case KeyValidationIssueKind.Unsupported:
+                    return location + ": unsupported key type/value at rows " + rows + ".";
+                default:
+                    return location + ": invalid key at rows " + rows + ".";
+            }
+        }
+
+        private static string FormatKeyValidationRows(List<int> rows)
+        {
+            if (rows == null || rows.Count == 0)
+            {
+                return "none";
+            }
+
+            const int maxVisibleRows = 8;
+            int visibleCount = Mathf.Min(maxVisibleRows, rows.Count);
+            List<string> labels = new List<string>(visibleCount + 1);
+            for (int i = 0; i < visibleCount; i++)
+            {
+                labels.Add((rows[i] + 1).ToString(CultureInfo.InvariantCulture));
+            }
+
+            if (rows.Count > visibleCount)
+            {
+                labels.Add("+" + (rows.Count - visibleCount).ToString(CultureInfo.InvariantCulture) + " more");
+            }
+
+            return string.Join(", ", labels);
+        }
+
+        private void DrawArrayGrid(
+            SerializedProperty arrayProperty,
+            List<TableColumn> columns,
+            SpreadAssetSheetState sheetState,
+            HashSet<string> invalidKeyCellKeys)
         {
             HashSet<string> formulaTargetKeys = GetFormulaTargetKeys(sheetState, arrayProperty.arraySize, columns);
             float frozenWidth = CalculateFrozenRowHeaderWidth();
@@ -989,7 +1220,8 @@ namespace SpreadAsset.Editor
                 dataWidth,
                 dataViewportWidth,
                 frozenWidth,
-                useHorizontalScroll);
+                useHorizontalScroll,
+                invalidKeyCellKeys);
         }
 
         private void DrawFrozenGridHeader(
@@ -1228,7 +1460,8 @@ namespace SpreadAsset.Editor
             float dataWidth,
             float dataViewportWidth,
             float frozenWidth,
-            bool useHorizontalScroll)
+            bool useHorizontalScroll,
+            HashSet<string> invalidKeyCellKeys)
         {
             GridRowLayout rowLayout = CalculateGridRowLayout(arrayProperty, columns);
             float rowContentHeight = rowLayout.ContentHeight;
@@ -1281,6 +1514,7 @@ namespace SpreadAsset.Editor
                     dataHeight,
                     useHorizontalScroll,
                     rowLayout,
+                    invalidKeyCellKeys,
                     visibleRows);
             }
             GUILayout.EndArea();
@@ -1346,6 +1580,7 @@ namespace SpreadAsset.Editor
             float dataHeight,
             bool useHorizontalScroll,
             GridRowLayout rowLayout,
+            HashSet<string> invalidKeyCellKeys,
             VisibleRowRange visibleRows)
         {
             if (useHorizontalScroll)
@@ -1366,6 +1601,7 @@ namespace SpreadAsset.Editor
                         sheetState,
                         dataWidth,
                         rowLayout,
+                        invalidKeyCellKeys,
                         visibleRows));
                 return;
             }
@@ -1384,6 +1620,7 @@ namespace SpreadAsset.Editor
                 sheetState,
                 dataWidth,
                 rowLayout,
+                invalidKeyCellKeys,
                 visibleRows);
             GUI.EndGroup();
         }
@@ -1395,6 +1632,7 @@ namespace SpreadAsset.Editor
             SpreadAssetSheetState sheetState,
             float dataWidth,
             GridRowLayout rowLayout,
+            HashSet<string> invalidKeyCellKeys,
             VisibleRowRange visibleRows)
         {
             for (int row = visibleRows.StartIndex; row < visibleRows.EndIndex; row++)
@@ -1407,6 +1645,7 @@ namespace SpreadAsset.Editor
                     columns,
                     row,
                     formulaTargetKeys,
+                    invalidKeyCellKeys,
                     sheetState);
             }
         }
@@ -1484,6 +1723,7 @@ namespace SpreadAsset.Editor
             List<TableColumn> columns,
             int rowIndex,
             HashSet<string> formulaTargetKeys,
+            HashSet<string> invalidKeyCellKeys,
             SpreadAssetSheetState sheetState)
         {
             bool hasFocusedCell = TryGetFocusedCellPosition(
@@ -1536,6 +1776,9 @@ namespace SpreadAsset.Editor
                 bool isFocusedRow = hasFocusedCell && rowIndex == focusedRowIndex;
                 bool isFocusedColumn = hasFocusedCell && columnIndex == focusedColumnIndex;
                 DrawFocusedCellBackground(cellAreaRect, isFocusedRow, isFocusedColumn);
+                DrawKeyValidationCellBackground(
+                    cellAreaRect,
+                    invalidKeyCellKeys != null && invalidKeyCellKeys.Contains(GetCellKey(rowIndex, columnIndex)));
 
                 if (column.IsDesignField)
                 {
@@ -1786,6 +2029,16 @@ namespace SpreadAsset.Editor
             EditorGUI.DrawRect(cellRect, GetFocusedCellBackgroundColor(isFocusedRow, isFocusedColumn));
         }
 
+        private static void DrawKeyValidationCellBackground(Rect cellRect, bool isInvalidKeyCell)
+        {
+            if (!isInvalidKeyCell)
+            {
+                return;
+            }
+
+            EditorGUI.DrawRect(cellRect, GetKeyValidationCellBackgroundColor());
+        }
+
         private static void DrawFocusedRowHeaderBackground(Rect rect, bool isFocusedRow)
         {
             if (isFocusedRow)
@@ -1821,6 +2074,13 @@ namespace SpreadAsset.Editor
             return EditorGUIUtility.isProSkin
                 ? new Color(0.26f, 0.58f, 0.95f, 0.18f)
                 : new Color(0.24f, 0.52f, 0.95f, 0.14f);
+        }
+
+        private static Color GetKeyValidationCellBackgroundColor()
+        {
+            return EditorGUIUtility.isProSkin
+                ? new Color(0.95f, 0.20f, 0.16f, 0.34f)
+                : new Color(1.00f, 0.12f, 0.08f, 0.24f);
         }
 
         private static string GetCellAddress(int rowIndex, int columnIndex)
@@ -2799,6 +3059,7 @@ namespace SpreadAsset.Editor
                 return;
             }
 
+            KeyValidationResult keyValidation = exportToAsset ? ValidateAllKeyFields() : new KeyValidationResult();
             SpreadAssetDocumentSync.CaptureWorkingCopy(_document, _workingCopy);
             SpreadAssetDocumentSync.EnsureDocumentData(_document, _targetAsset);
             SpreadAssetDocumentIO.Write(_documentPath, _document);
@@ -2806,6 +3067,17 @@ namespace SpreadAsset.Editor
 
             if (exportToAsset)
             {
+                if (keyValidation.HasErrors)
+                {
+                    EditorUtility.DisplayDialog(
+                        "Export Blocked",
+                        "Saved the .spreadasset source, but the linked .asset was not exported because key validation failed.\n\n"
+                        + FormatKeyValidationSummary(keyValidation, 10),
+                        "OK");
+                    _isDocumentDirty = false;
+                    return;
+                }
+
                 SpreadAssetDocumentSync.ExportToLinkedAsset(_document, _targetAsset);
             }
 
@@ -6188,6 +6460,75 @@ namespace SpreadAsset.Editor
         private static string GetCellKey(int rowIndex, int columnIndex)
         {
             return rowIndex + ":" + columnIndex;
+        }
+
+        private sealed class KeyValidationResult
+        {
+            public readonly List<KeyValidationIssue> Issues = new List<KeyValidationIssue>();
+            public readonly HashSet<string> InvalidCellKeys = new HashSet<string>(StringComparer.Ordinal);
+
+            public bool HasErrors => Issues.Count > 0;
+
+            public void Add(KeyValidationResult result)
+            {
+                if (result == null)
+                {
+                    return;
+                }
+
+                Issues.AddRange(result.Issues);
+                foreach (string cellKey in result.InvalidCellKeys)
+                {
+                    InvalidCellKeys.Add(cellKey);
+                }
+            }
+
+            public void AddIssue(KeyValidationIssue issue)
+            {
+                if (issue == null)
+                {
+                    return;
+                }
+
+                Issues.Add(issue);
+                foreach (int row in issue.Rows)
+                {
+                    InvalidCellKeys.Add(GetCellKey(row, issue.ColumnIndex));
+                }
+            }
+        }
+
+        private sealed class KeyValidationIssue
+        {
+            public readonly KeyValidationIssueKind Kind;
+            public readonly string SheetName;
+            public readonly string ColumnName;
+            public readonly int ColumnIndex;
+            public readonly string KeyValue;
+            public readonly List<int> Rows;
+
+            public KeyValidationIssue(
+                KeyValidationIssueKind kind,
+                string sheetName,
+                string columnName,
+                int columnIndex,
+                string keyValue,
+                List<int> rows)
+            {
+                Kind = kind;
+                SheetName = sheetName ?? string.Empty;
+                ColumnName = columnName ?? string.Empty;
+                ColumnIndex = columnIndex;
+                KeyValue = keyValue ?? string.Empty;
+                Rows = rows ?? new List<int>();
+            }
+        }
+
+        private enum KeyValidationIssueKind
+        {
+            Duplicate,
+            Empty,
+            Unsupported
         }
 
         private sealed class DesignFormulaCellStore : ISpreadAssetFormulaCellStore
