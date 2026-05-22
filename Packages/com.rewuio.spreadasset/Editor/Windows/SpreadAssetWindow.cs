@@ -22,7 +22,12 @@ namespace SpreadAsset.Editor
         private const float ColumnResizeHandleWidth = 6f;
         private const float FormulaRowHeight = 22f;
         private const float TableRowHeight = 24f;
-        private const float TableHeaderHeight = TableRowHeight * 2f;
+        private const float ColumnLetterHeaderHeight = 20f;
+        private const float ColumnHeaderGap = 1f;
+        private const float ColumnHeaderLabelHeight = 31f;
+        private const float ColumnHeaderBottomPadding = 1f;
+        private const float TableHeaderHeight =
+            ColumnLetterHeaderHeight + ColumnHeaderGap + ColumnHeaderLabelHeight + ColumnHeaderBottomPadding;
         private const float HorizontalScrollbarHeight = 16f;
         private const float HorizontalWheelScrollSpeed = 24f;
         private const float TableLayoutPadding = 6f;
@@ -57,6 +62,7 @@ namespace SpreadAsset.Editor
         private int _focusedCellRowIndex = -1;
         private int _focusedCellColumnIndex = -1;
         private float _tableRowViewportHeight;
+        private static GUIStyle _columnHeaderLabelStyle;
         private readonly Dictionary<string, string> _formulaDrafts = new Dictionary<string, string>();
         private readonly Dictionary<SpreadAssetSheetState, FormulaSheetCache> _formulaSheetCaches =
             new Dictionary<SpreadAssetSheetState, FormulaSheetCache>();
@@ -993,21 +999,15 @@ namespace SpreadAsset.Editor
 
         private static void DrawFrozenGridCorner(float frozenWidth, float headerHeight)
         {
-            using (new EditorGUILayout.VerticalScope(GUILayout.Width(frozenWidth), GUILayout.Height(headerHeight)))
-            {
-                using (new EditorGUILayout.HorizontalScope(GUILayout.Height(TableRowHeight)))
-                {
-                    GUILayout.Label("#", EditorStyles.boldLabel, GUILayout.Width(RowNumberWidth));
-                    GUILayout.Space(RowButtonWidth * 2f + 6f);
-                }
-
-                GUILayout.Space(EditorGUIUtility.standardVerticalSpacing);
-
-                using (new EditorGUILayout.HorizontalScope(GUILayout.Height(TableRowHeight)))
-                {
-                    GUILayout.Space(frozenWidth);
-                }
-            }
+            Rect cornerRect = GUILayoutUtility.GetRect(
+                frozenWidth,
+                headerHeight,
+                GUILayout.Width(frozenWidth),
+                GUILayout.Height(headerHeight));
+            GUI.Label(
+                new Rect(cornerRect.x, cornerRect.y, RowNumberWidth, ColumnLetterHeaderHeight),
+                "#",
+                EditorStyles.boldLabel);
         }
 
         private void DrawColumnHeaderCells(
@@ -1046,40 +1046,46 @@ namespace SpreadAsset.Editor
             float headerHeight,
             int focusedColumnIndex)
         {
-            using (new EditorGUILayout.VerticalScope(GUILayout.Width(dataWidth), GUILayout.Height(headerHeight)))
+            Rect tableRect = GUILayoutUtility.GetRect(
+                dataWidth,
+                headerHeight,
+                GUILayout.Width(dataWidth),
+                GUILayout.Height(headerHeight));
+            GUI.BeginGroup(tableRect);
+            float x = 0f;
+            for (int columnIndex = 0; columnIndex < columns.Count; columnIndex++)
             {
-                using (new EditorGUILayout.HorizontalScope(GUILayout.Height(TableRowHeight)))
-                {
-                    for (int columnIndex = 0; columnIndex < columns.Count; columnIndex++)
-                    {
-                        TableColumn column = columns[columnIndex];
-                        Rect headerRect = GUILayoutUtility.GetRect(
-                            column.Width,
-                            TableRowHeight,
-                            GUILayout.Width(column.Width),
-                            GUILayout.Height(TableRowHeight));
-                        DrawFocusedColumnHeaderBackground(headerRect, columnIndex == focusedColumnIndex);
-                        GUI.Label(headerRect, GetColumnName(columnIndex), EditorStyles.boldLabel);
-                        HandleColumnResize(headerRect, sheetState, columns, columnIndex);
-                    }
-                }
+                TableColumn column = columns[columnIndex];
+                Rect columnRect = new Rect(x, 0f, column.Width, TableHeaderHeight);
+                Rect letterRect = new Rect(x, 0f, column.Width, ColumnLetterHeaderHeight);
+                Rect labelRect = new Rect(
+                    x,
+                    ColumnLetterHeaderHeight + ColumnHeaderGap,
+                    column.Width,
+                    ColumnHeaderLabelHeight);
 
-                using (new EditorGUILayout.HorizontalScope(GUILayout.Height(TableRowHeight)))
-                {
-                    for (int columnIndex = 0; columnIndex < columns.Count; columnIndex++)
-                    {
-                        TableColumn column = columns[columnIndex];
-                        Rect headerRect = GUILayoutUtility.GetRect(
-                            column.Width,
-                            TableRowHeight,
-                            GUILayout.Width(column.Width),
-                            GUILayout.Height(TableRowHeight));
-                        DrawFocusedColumnHeaderBackground(headerRect, columnIndex == focusedColumnIndex);
-                        GUI.Label(headerRect, column.HeaderLabel, EditorStyles.miniLabel);
-                        HandleColumnResize(headerRect, sheetState, columns, columnIndex);
-                    }
-                }
+                DrawFocusedColumnHeaderBackground(columnRect, columnIndex == focusedColumnIndex);
+                GUI.Label(letterRect, GetColumnName(columnIndex), EditorStyles.boldLabel);
+                GUI.Label(labelRect, column.HeaderLabel, GetColumnHeaderLabelStyle());
+                HandleColumnResize(columnRect, sheetState, columns, columnIndex);
+                x += column.Width;
             }
+            GUI.EndGroup();
+        }
+
+        private static GUIStyle GetColumnHeaderLabelStyle()
+        {
+            if (_columnHeaderLabelStyle == null)
+            {
+                _columnHeaderLabelStyle = new GUIStyle(EditorStyles.miniLabel)
+                {
+                    alignment = TextAnchor.UpperLeft,
+                    clipping = TextClipping.Clip,
+                    wordWrap = false
+                };
+            }
+
+            return _columnHeaderLabelStyle;
         }
 
         private void HandleColumnResize(
@@ -4009,7 +4015,7 @@ namespace SpreadAsset.Editor
             string typeLabel = isDesignField && !string.IsNullOrEmpty(displayTypeName)
                 ? $"{displayTypeName}, design"
                 : displayTypeName;
-            string headerLabel = string.IsNullOrEmpty(typeLabel) ? displayName : $"{displayName}({typeLabel})";
+            string headerLabel = string.IsNullOrEmpty(typeLabel) ? displayName : $"{displayName}\n{typeLabel}";
             return new TableColumn(
                 propertyName,
                 displayName,
@@ -4098,12 +4104,24 @@ namespace SpreadAsset.Editor
 
         private static float CalculateColumnWidth(string label)
         {
-            return Mathf.Clamp(EditorStyles.label.CalcSize(new GUIContent(label)).x + 48f, MinimumColumnWidth, MaximumColumnWidth);
+            if (string.IsNullOrEmpty(label))
+            {
+                return MinimumColumnWidth;
+            }
+
+            float width = 0f;
+            string[] lines = label.Split('\n');
+            foreach (string line in lines)
+            {
+                width = Mathf.Max(width, EditorStyles.label.CalcSize(new GUIContent(line)).x);
+            }
+
+            return Mathf.Clamp(width + 48f, MinimumColumnWidth, MaximumColumnWidth);
         }
 
         private static float CalculateGridHeaderHeight()
         {
-            return TableHeaderHeight + EditorGUIUtility.standardVerticalSpacing;
+            return TableHeaderHeight;
         }
 
         private static VisibleRowRange CalculateVisibleRowRange(int rowCount, float scrollY, float viewportHeight)
