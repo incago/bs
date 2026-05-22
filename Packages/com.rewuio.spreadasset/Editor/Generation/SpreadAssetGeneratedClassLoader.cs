@@ -21,7 +21,7 @@ namespace SpreadAsset.Editor
             RegexOptions.Compiled);
 
         private static readonly Regex BoolAssignmentPattern = new Regex(
-            @"\b(?<name>IsDesignField)\s*=\s*(?<value>true|false)",
+            @"\b(?<name>IsDesignField|IsKeyField)\s*=\s*(?<value>true|false)",
             RegexOptions.Compiled);
 
         public static bool TryLoadFromSelection(out SpreadAssetGenerationRequest request, out string sourcePath, out string error)
@@ -274,6 +274,7 @@ namespace SpreadAsset.Editor
                 string typeName = string.Empty;
                 string fieldName = string.Empty;
                 bool isDesignField = false;
+                bool isKeyField = false;
 
                 foreach (Match assignment in StringAssignmentPattern.Matches(body))
                 {
@@ -302,6 +303,13 @@ namespace SpreadAsset.Editor
                             "true",
                             StringComparison.OrdinalIgnoreCase);
                     }
+                    else if (assignment.Groups["name"].Value == "IsKeyField")
+                    {
+                        isKeyField = string.Equals(
+                            assignment.Groups["value"].Value,
+                            "true",
+                            StringComparison.OrdinalIgnoreCase);
+                    }
                 }
 
                 if (string.IsNullOrEmpty(typeName) || string.IsNullOrEmpty(fieldName))
@@ -314,7 +322,8 @@ namespace SpreadAsset.Editor
                     Id = fieldId,
                     TypeName = typeName,
                     Name = fieldName,
-                    IsDesignField = isDesignField
+                    IsDesignField = isDesignField,
+                    IsKeyField = isDesignField ? false : isKeyField
                 });
             }
 

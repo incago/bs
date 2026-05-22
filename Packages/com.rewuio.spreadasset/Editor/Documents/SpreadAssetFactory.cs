@@ -337,6 +337,11 @@ namespace SpreadAsset.Editor
                     builder.Append(", IsDesignField = true");
                 }
 
+                if (field.IsKeyField)
+                {
+                    builder.Append(", IsKeyField = true");
+                }
+
                 builder.AppendLine(" },");
             }
 

@@ -1,8 +1,8 @@
 {
     "name": "com.rewuio.spreadasset",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "displayName": "SpreadAsset",
-    "description": "Spreadsheet-style authoring tools for Unity ScriptableObject data. Edit and compare arrays as sheets, then export linked runtime .asset files.",
+    "description": "Spreadsheet-style authoring tools for Unity ScriptableObject data. Create paired .spreadasset source documents and linked runtime .asset files, edit array data as sheets with formulas, round-trip selected sheets through CSV import/export, and generate key-based row lookup helpers for runtime assets.",
     "unity": "6000.4",
     "type": "tool",
     "author": {

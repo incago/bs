@@ -26,7 +26,7 @@ namespace SpreadAsset.Generated.Editor
                         FieldName = "CharacterDatas",
                         Fields = new SpreadAssetSchemaField[]
                         {
-                            new SpreadAssetSchemaField { Id = "field_a631c88c0301bb17", TypeName = "int", Name = "Id" },
+                            new SpreadAssetSchemaField { Id = "field_a631c88c0301bb17", TypeName = "int", Name = "Id", IsKeyField = true },
                             new SpreadAssetSchemaField { Id = "field_8b3423c2c8dfe2fd", TypeName = "string", Name = "Name", IsDesignField = true },
                             new SpreadAssetSchemaField { Id = "field_d65905368e261141", TypeName = "float", Name = "Weight" },
                             new SpreadAssetSchemaField { Id = "field_0a7bcfc06e89ec59", TypeName = "string", Name = "ResourceName", IsDesignField = true },
@@ -47,7 +47,7 @@ namespace SpreadAsset.Generated.Editor
                         FieldName = "SkillDatas",
                         Fields = new SpreadAssetSchemaField[]
                         {
-                            new SpreadAssetSchemaField { Id = "field_84f1401280d5777f", TypeName = "int", Name = "Id" },
+                            new SpreadAssetSchemaField { Id = "field_84f1401280d5777f", TypeName = "int", Name = "Id", IsKeyField = true },
                             new SpreadAssetSchemaField { Id = "field_fb1d12c6907c4c06b7a3a9968d6c85e8", TypeName = "string", Name = "Name" },
                             new SpreadAssetSchemaField { Id = "field_c5992b76da9b4636985f312244e85aa7", TypeName = "int", Name = "Cost" },
                             new SpreadAssetSchemaField { Id = "field_1c819ce986d0429b92b1179d3b1ca927", TypeName = "float", Name = "Cooldown" },

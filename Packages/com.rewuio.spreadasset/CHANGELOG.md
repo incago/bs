@@ -33,3 +33,5 @@
 - Changed SpreadAsset Generator array data field types from free text input to a dropdown.
 - Added a Project window menu to recreate a `.spreadasset` document from an existing `.asset`.
 - Added migration support that infers a SpreadAsset schema from an existing ScriptableObject asset and generates the matching editor factory script.
+- Added selected-sheet CSV export and import from the SpreadAsset Editor window.
+- Added Generator key fields for array data tables and generated runtime row lookup helpers.

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using UnityEditor;
@@ -318,6 +319,16 @@ namespace SpreadAsset.Editor
                 if (GUILayout.Button("Import Asset", GUILayout.Width(96), GUILayout.Height(30)))
                 {
                     ImportFromLinkedAsset();
+                }
+
+                if (GUILayout.Button("Export CSV", GUILayout.Width(92), GUILayout.Height(30)))
+                {
+                    ExportSelectedSheetToCsv();
+                }
+
+                if (GUILayout.Button("Import CSV", GUILayout.Width(92), GUILayout.Height(30)))
+                {
+                    ImportSelectedSheetFromCsv();
                 }
 
                 if (GUILayout.Button("Ping Asset", GUILayout.Width(88), GUILayout.Height(30)))
@@ -2574,6 +2585,1213 @@ namespace SpreadAsset.Editor
             _isDocumentDirty = false;
         }
 
+        private void ExportSelectedSheetToCsv()
+        {
+            if (!TryPrepareSelectedSheetForCsv(
+                    out SerializedProperty arrayProperty,
+                    out SpreadAssetSheetState sheetState,
+                    out List<TableColumn> columns,
+                    out string error))
+            {
+                EditorUtility.DisplayDialog("Export CSV", error, "OK");
+                return;
+            }
+
+            string path = EditorUtility.SaveFilePanel(
+                "Export SpreadAsset CSV",
+                GetCsvPanelDirectory(),
+                CreateCsvFileName(arrayProperty, sheetState),
+                "csv");
+            if (string.IsNullOrEmpty(path))
+            {
+                return;
+            }
+
+            List<List<string>> rows = CreateCsvRows(arrayProperty, columns, sheetState, out int unsupportedCellCount);
+            try
+            {
+                SpreadAssetCsvUtility.WriteFile(path, rows);
+            }
+            catch (Exception exception)
+            {
+                EditorUtility.DisplayDialog("Export CSV", exception.Message, "OK");
+                return;
+            }
+
+            string message = $"Exported {arrayProperty.arraySize} rows from {GetSheetDisplayName(arrayProperty, sheetState)}.";
+            if (unsupportedCellCount > 0)
+            {
+                message += $"\n{unsupportedCellCount} complex cells were left empty because they are not supported by CSV import/export.";
+            }
+
+            EditorUtility.DisplayDialog("Export CSV", message, "OK");
+        }
+
+        private void ImportSelectedSheetFromCsv()
+        {
+            if (!TryPrepareSelectedSheetForCsv(
+                    out SerializedProperty arrayProperty,
+                    out SpreadAssetSheetState sheetState,
+                    out List<TableColumn> columns,
+                    out string error))
+            {
+                EditorUtility.DisplayDialog("Import CSV", error, "OK");
+                return;
+            }
+
+            string path = EditorUtility.OpenFilePanel(
+                "Import SpreadAsset CSV",
+                GetCsvPanelDirectory(),
+                "csv");
+            if (string.IsNullOrEmpty(path))
+            {
+                return;
+            }
+
+            if (!SpreadAssetCsvUtility.TryReadFile(path, out List<List<string>> rows, out error))
+            {
+                EditorUtility.DisplayDialog("Import CSV", error, "OK");
+                return;
+            }
+
+            if (!TryCreateCsvImportPlan(rows, columns, out CsvImportPlan importPlan, out error))
+            {
+                EditorUtility.DisplayDialog("Import CSV", error, "OK");
+                return;
+            }
+
+            string sheetName = GetSheetDisplayName(arrayProperty, sheetState);
+            bool import = EditorUtility.DisplayDialog(
+                "Import CSV?",
+                $"Import {importPlan.RowCount} rows into {sheetName}?\n\nThis updates the selected sheet in the editor. Use Save & Export when you are ready to write the .spreadasset source and linked .asset.",
+                "Import",
+                "Cancel");
+            if (!import)
+            {
+                return;
+            }
+
+            string importBackupJson = EditorJsonUtility.ToJson(_workingCopy, true);
+            SpreadAssetCellState[] importBackupCells = CloneSheetCells(sheetState.Cells);
+            if (!TryApplyCsvImportPlan(arrayProperty, columns, sheetState, rows, importPlan, out CsvImportSummary summary, out error))
+            {
+                RestoreCsvImportBackup(importBackupJson, sheetState, importBackupCells);
+                EditorUtility.DisplayDialog("Import CSV", error, "OK");
+                return;
+            }
+
+            _serializedObject.ApplyModifiedProperties();
+            InvalidateSheetFormulaCache(sheetState, markDirty: true);
+            ApplyFormulas(arrayProperty, columns, sheetState, markDirty: true, forceRecompile: true);
+            if (!string.IsNullOrEmpty(_formulaError))
+            {
+                RestoreCsvImportBackup(importBackupJson, sheetState, importBackupCells);
+                EditorUtility.DisplayDialog("Import CSV", _formulaError, "OK");
+                return;
+            }
+
+            _isDocumentDirty = true;
+            RefreshArrayPropertyPaths();
+            Repaint();
+
+            string message = $"Imported {summary.RowCount} rows into {sheetName}.";
+            if (summary.UnknownHeaderCount > 0)
+            {
+                message += $"\nIgnored {summary.UnknownHeaderCount} unmatched CSV columns.";
+            }
+
+            if (summary.UnsupportedCellCount > 0)
+            {
+                message += $"\nSkipped {summary.UnsupportedCellCount} cells whose Unity property type is not supported by CSV import.";
+            }
+
+            EditorUtility.DisplayDialog("Import CSV", message, "OK");
+        }
+
+        private void RestoreCsvImportBackup(
+            string serializedAssetJson,
+            SpreadAssetSheetState sheetState,
+            SpreadAssetCellState[] cells)
+        {
+            if (_workingCopy != null && !string.IsNullOrEmpty(serializedAssetJson))
+            {
+                EditorJsonUtility.FromJsonOverwrite(serializedAssetJson, _workingCopy);
+                _serializedObject = new SerializedObject(_workingCopy);
+            }
+
+            if (sheetState != null)
+            {
+                sheetState.Cells = CloneSheetCells(cells);
+                InvalidateSheetFormulaCache(sheetState, markDirty: true);
+            }
+
+            RefreshArrayPropertyPaths();
+            Repaint();
+        }
+
+        private static SpreadAssetCellState[] CloneSheetCells(SpreadAssetCellState[] cells)
+        {
+            if (cells == null || cells.Length == 0)
+            {
+                return Array.Empty<SpreadAssetCellState>();
+            }
+
+            SpreadAssetCellState[] clones = new SpreadAssetCellState[cells.Length];
+            for (int i = 0; i < cells.Length; i++)
+            {
+                SpreadAssetCellState cell = cells[i];
+                if (cell == null)
+                {
+                    continue;
+                }
+
+                clones[i] = new SpreadAssetCellState
+                {
+                    Row = cell.Row,
+                    ColumnId = cell.ColumnId,
+                    ColumnName = cell.ColumnName,
+                    Value = cell.Value,
+                    Formula = cell.Formula,
+                    Note = cell.Note
+                };
+            }
+
+            return clones;
+        }
+
+        private bool TryPrepareSelectedSheetForCsv(
+            out SerializedProperty arrayProperty,
+            out SpreadAssetSheetState sheetState,
+            out List<TableColumn> columns,
+            out string error)
+        {
+            arrayProperty = null;
+            sheetState = null;
+            columns = null;
+            error = string.Empty;
+
+            if (_serializedObject == null || _workingCopy == null)
+            {
+                error = "Open a .spreadasset document first.";
+                return false;
+            }
+
+            if (_arrayPropertyPaths.Count == 0)
+            {
+                error = "The opened document has no array sheets to export or import.";
+                return false;
+            }
+
+            _serializedObject.ApplyModifiedProperties();
+            CommitAllFormulaDrafts();
+
+            _selectedArrayIndex = Mathf.Clamp(_selectedArrayIndex, 0, _arrayPropertyPaths.Count - 1);
+            arrayProperty = _serializedObject.FindProperty(_arrayPropertyPaths[_selectedArrayIndex]);
+            if (arrayProperty == null)
+            {
+                error = "Selected array sheet could not be found.";
+                return false;
+            }
+
+            sheetState = GetOrCreateSheetState(arrayProperty);
+            columns = GetColumns(arrayProperty, sheetState);
+            if (!TryApplyFormulaSet(arrayProperty, columns, sheetState, forceRecompile: true, out _, out error))
+            {
+                _formulaError = error;
+                return false;
+            }
+
+            _formulaError = string.Empty;
+            _dirtyFormulaSheets.Remove(sheetState);
+            _serializedObject.ApplyModifiedProperties();
+            return true;
+        }
+
+        private List<List<string>> CreateCsvRows(
+            SerializedProperty arrayProperty,
+            List<TableColumn> columns,
+            SpreadAssetSheetState sheetState,
+            out int unsupportedCellCount)
+        {
+            unsupportedCellCount = 0;
+            List<CsvColumnBinding> bindings = CreateCsvColumnBindings(columns);
+            List<List<string>> rows = new List<List<string>>(arrayProperty.arraySize + 1);
+            List<string> header = new List<string>(bindings.Count);
+            foreach (CsvColumnBinding binding in bindings)
+            {
+                header.Add(binding.Header);
+            }
+
+            rows.Add(header);
+            for (int rowIndex = 0; rowIndex < arrayProperty.arraySize; rowIndex++)
+            {
+                SerializedProperty element = arrayProperty.GetArrayElementAtIndex(rowIndex);
+                List<string> row = new List<string>(bindings.Count);
+                foreach (CsvColumnBinding binding in bindings)
+                {
+                    row.Add(GetCsvCellValue(
+                        element,
+                        columns,
+                        sheetState,
+                        rowIndex,
+                        binding,
+                        out bool supported));
+                    if (!supported)
+                    {
+                        unsupportedCellCount++;
+                    }
+                }
+
+                rows.Add(row);
+            }
+
+            return rows;
+        }
+
+        private static string GetCsvCellValue(
+            SerializedProperty element,
+            List<TableColumn> columns,
+            SpreadAssetSheetState sheetState,
+            int rowIndex,
+            CsvColumnBinding binding,
+            out bool supported)
+        {
+            supported = true;
+            if (binding.ColumnIndex < 0)
+            {
+                if (TryGetSerializedPropertyCsvValue(element, out string elementValue))
+                {
+                    return elementValue;
+                }
+
+                supported = false;
+                return string.Empty;
+            }
+
+            TableColumn column = columns[binding.ColumnIndex];
+            if (column.IsDesignField)
+            {
+                return GetDesignCellValue(sheetState, rowIndex, column);
+            }
+
+            SerializedProperty cell = GetCellProperty(element, column);
+            if (cell != null && TryGetSerializedPropertyCsvValue(cell, out string value))
+            {
+                return value;
+            }
+
+            supported = false;
+            return string.Empty;
+        }
+
+        private static bool TryCreateCsvImportPlan(
+            List<List<string>> rows,
+            List<TableColumn> columns,
+            out CsvImportPlan importPlan,
+            out string error)
+        {
+            importPlan = default;
+            error = string.Empty;
+
+            int headerRowIndex = FindFirstCsvContentRow(rows);
+            if (headerRowIndex < 0)
+            {
+                error = "CSV does not contain a header row.";
+                return false;
+            }
+
+            List<string> header = rows[headerRowIndex];
+            Dictionary<string, int> lookup = CreateCsvColumnLookup(columns);
+            List<CsvImportColumn> importColumns = new List<CsvImportColumn>();
+            int unknownHeaderCount = 0;
+
+            for (int sourceColumnIndex = 0; sourceColumnIndex < header.Count; sourceColumnIndex++)
+            {
+                string normalizedHeader = NormalizeCsvHeader(header[sourceColumnIndex]);
+                if (string.IsNullOrEmpty(normalizedHeader))
+                {
+                    continue;
+                }
+
+                if (lookup.TryGetValue(normalizedHeader, out int targetColumnIndex))
+                {
+                    importColumns.Add(new CsvImportColumn(sourceColumnIndex, targetColumnIndex, header[sourceColumnIndex]));
+                }
+                else
+                {
+                    unknownHeaderCount++;
+                }
+            }
+
+            if (importColumns.Count == 0)
+            {
+                error = "CSV headers do not match any columns in the selected sheet.";
+                return false;
+            }
+
+            int dataStartRowIndex = headerRowIndex + 1;
+            int dataEndRowIndex = rows.Count;
+            while (dataEndRowIndex > dataStartRowIndex && IsBlankCsvRow(rows[dataEndRowIndex - 1]))
+            {
+                dataEndRowIndex--;
+            }
+
+            importPlan = new CsvImportPlan(
+                headerRowIndex,
+                dataStartRowIndex,
+                dataEndRowIndex,
+                importColumns,
+                unknownHeaderCount);
+            return true;
+        }
+
+        private static bool TryApplyCsvImportPlan(
+            SerializedProperty arrayProperty,
+            List<TableColumn> columns,
+            SpreadAssetSheetState sheetState,
+            List<List<string>> rows,
+            CsvImportPlan importPlan,
+            out CsvImportSummary summary,
+            out string error)
+        {
+            summary = default;
+            error = string.Empty;
+            int rowCount = importPlan.RowCount;
+            int previousSize = arrayProperty.arraySize;
+            arrayProperty.arraySize = rowCount;
+
+            for (int rowIndex = previousSize; rowIndex < rowCount; rowIndex++)
+            {
+                ClearPropertyValue(arrayProperty.GetArrayElementAtIndex(rowIndex));
+            }
+
+            if (rowCount < previousSize)
+            {
+                TrimSheetCells(sheetState, rowCount);
+            }
+
+            int unsupportedCellCount = 0;
+            for (int dataRowIndex = importPlan.DataStartRowIndex; dataRowIndex < importPlan.DataEndRowIndex; dataRowIndex++)
+            {
+                int targetRowIndex = dataRowIndex - importPlan.DataStartRowIndex;
+                List<string> csvRow = rows[dataRowIndex];
+                SerializedProperty element = arrayProperty.GetArrayElementAtIndex(targetRowIndex);
+
+                foreach (CsvImportColumn importColumn in importPlan.Columns)
+                {
+                    string value = importColumn.SourceColumnIndex < csvRow.Count
+                        ? csvRow[importColumn.SourceColumnIndex]
+                        : string.Empty;
+                    if (!TrySetCsvCellValue(
+                            element,
+                            columns,
+                            sheetState,
+                            targetRowIndex,
+                            importColumn.TargetColumnIndex,
+                            value,
+                            out bool supported,
+                            out error))
+                    {
+                        error = $"Row {targetRowIndex + 1}, column {importColumn.Header}: {error}";
+                        return false;
+                    }
+
+                    if (!supported)
+                    {
+                        unsupportedCellCount++;
+                    }
+                }
+            }
+
+            summary = new CsvImportSummary(rowCount, importPlan.UnknownHeaderCount, unsupportedCellCount);
+            return true;
+        }
+
+        private static bool TrySetCsvCellValue(
+            SerializedProperty element,
+            List<TableColumn> columns,
+            SpreadAssetSheetState sheetState,
+            int rowIndex,
+            int targetColumnIndex,
+            string value,
+            out bool supported,
+            out string error)
+        {
+            supported = true;
+            error = string.Empty;
+
+            if (targetColumnIndex < 0)
+            {
+                return TrySetSerializedPropertyCsvValue(element, value, out supported, out error);
+            }
+
+            TableColumn column = columns[targetColumnIndex];
+            if (column.IsDesignField)
+            {
+                SetDesignCellValue(sheetState, rowIndex, column, value);
+                return true;
+            }
+
+            SerializedProperty cell = GetCellProperty(element, column);
+            if (cell == null)
+            {
+                supported = false;
+                return true;
+            }
+
+            return TrySetSerializedPropertyCsvValue(cell, value, out supported, out error);
+        }
+
+        private static List<CsvColumnBinding> CreateCsvColumnBindings(List<TableColumn> columns)
+        {
+            List<CsvColumnBinding> bindings = new List<CsvColumnBinding>();
+            HashSet<string> usedHeaders = new HashSet<string>(StringComparer.Ordinal);
+            if (columns == null || columns.Count == 0)
+            {
+                bindings.Add(new CsvColumnBinding(MakeUniqueCsvHeader("Value", usedHeaders), -1));
+                return bindings;
+            }
+
+            for (int columnIndex = 0; columnIndex < columns.Count; columnIndex++)
+            {
+                bindings.Add(new CsvColumnBinding(
+                    MakeUniqueCsvHeader(GetCsvColumnName(columns[columnIndex]), usedHeaders),
+                    columnIndex));
+            }
+
+            return bindings;
+        }
+
+        private static Dictionary<string, int> CreateCsvColumnLookup(List<TableColumn> columns)
+        {
+            Dictionary<string, int> lookup = new Dictionary<string, int>(StringComparer.Ordinal);
+            if (columns == null || columns.Count == 0)
+            {
+                AddCsvColumnLookup(lookup, "Value", -1);
+                return lookup;
+            }
+
+            foreach (CsvColumnBinding binding in CreateCsvColumnBindings(columns))
+            {
+                AddCsvColumnLookup(lookup, binding.Header, binding.ColumnIndex);
+            }
+
+            for (int columnIndex = 0; columnIndex < columns.Count; columnIndex++)
+            {
+                TableColumn column = columns[columnIndex];
+                AddCsvColumnLookup(lookup, GetCsvColumnName(column), columnIndex);
+                AddCsvColumnLookup(lookup, column.DisplayName, columnIndex);
+                AddCsvColumnLookup(lookup, column.SchemaName, columnIndex);
+                AddCsvColumnLookup(lookup, column.PropertyName, columnIndex);
+
+                if (!string.IsNullOrEmpty(column.PropertyName))
+                {
+                    AddCsvColumnLookup(
+                        lookup,
+                        SpreadAssetNameUtility.ToPascalCase(column.PropertyName.TrimStart('_')),
+                        columnIndex);
+                }
+            }
+
+            return lookup;
+        }
+
+        private static void AddCsvColumnLookup(Dictionary<string, int> lookup, string header, int columnIndex)
+        {
+            string normalizedHeader = NormalizeCsvHeader(header);
+            if (!string.IsNullOrEmpty(normalizedHeader) && !lookup.ContainsKey(normalizedHeader))
+            {
+                lookup.Add(normalizedHeader, columnIndex);
+            }
+        }
+
+        private static string GetCsvColumnName(TableColumn column)
+        {
+            if (!string.IsNullOrWhiteSpace(column.SchemaName))
+            {
+                return column.SchemaName;
+            }
+
+            if (!string.IsNullOrWhiteSpace(column.DisplayName))
+            {
+                return column.DisplayName;
+            }
+
+            return string.IsNullOrWhiteSpace(column.PropertyName) ? "Value" : column.PropertyName;
+        }
+
+        private static string MakeUniqueCsvHeader(string header, HashSet<string> usedHeaders)
+        {
+            string baseHeader = string.IsNullOrWhiteSpace(header) ? "Column" : header.Trim();
+            string uniqueHeader = baseHeader;
+            int suffix = 2;
+            while (!usedHeaders.Add(NormalizeCsvHeader(uniqueHeader)))
+            {
+                uniqueHeader = baseHeader + " " + suffix.ToString(CultureInfo.InvariantCulture);
+                suffix++;
+            }
+
+            return uniqueHeader;
+        }
+
+        private static string NormalizeCsvHeader(string header)
+        {
+            if (string.IsNullOrWhiteSpace(header))
+            {
+                return string.Empty;
+            }
+
+            string trimmed = header.Trim().TrimStart('\uFEFF');
+            List<char> chars = new List<char>(trimmed.Length);
+            foreach (char character in trimmed)
+            {
+                if (char.IsWhiteSpace(character) || character == '_')
+                {
+                    continue;
+                }
+
+                chars.Add(char.ToUpperInvariant(character));
+            }
+
+            return new string(chars.ToArray());
+        }
+
+        private static int FindFirstCsvContentRow(List<List<string>> rows)
+        {
+            if (rows == null)
+            {
+                return -1;
+            }
+
+            for (int rowIndex = 0; rowIndex < rows.Count; rowIndex++)
+            {
+                if (!IsBlankCsvRow(rows[rowIndex]))
+                {
+                    return rowIndex;
+                }
+            }
+
+            return -1;
+        }
+
+        private static bool IsBlankCsvRow(List<string> row)
+        {
+            if (row == null || row.Count == 0)
+            {
+                return true;
+            }
+
+            foreach (string value in row)
+            {
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private string GetCsvPanelDirectory()
+        {
+            string assetPath = _documentPath;
+            if (string.IsNullOrEmpty(assetPath) && _targetAsset != null)
+            {
+                assetPath = AssetDatabase.GetAssetPath(_targetAsset);
+            }
+
+            if (string.IsNullOrEmpty(assetPath))
+            {
+                return Application.dataPath;
+            }
+
+            string projectRoot = Directory.GetParent(Application.dataPath)?.FullName ?? string.Empty;
+            string assetDirectory = Path.GetDirectoryName(assetPath);
+            return string.IsNullOrEmpty(assetDirectory)
+                ? Application.dataPath
+                : Path.Combine(projectRoot, assetDirectory);
+        }
+
+        private string CreateCsvFileName(SerializedProperty arrayProperty, SpreadAssetSheetState sheetState)
+        {
+            string documentName = string.IsNullOrEmpty(_documentPath)
+                ? "SpreadAsset"
+                : Path.GetFileNameWithoutExtension(_documentPath);
+            string sheetName = GetSheetDisplayName(arrayProperty, sheetState);
+            return SpreadAssetNameUtility.ToSafeFileName(documentName + "_" + sheetName) + ".csv";
+        }
+
+        private static string GetSheetDisplayName(SerializedProperty arrayProperty, SpreadAssetSheetState sheetState)
+        {
+            if (!string.IsNullOrWhiteSpace(sheetState?.ArrayFieldName))
+            {
+                return sheetState.ArrayFieldName;
+            }
+
+            if (!string.IsNullOrWhiteSpace(arrayProperty?.displayName))
+            {
+                return arrayProperty.displayName;
+            }
+
+            return string.IsNullOrWhiteSpace(arrayProperty?.name) ? "Sheet" : arrayProperty.name;
+        }
+
+        private static bool TryGetSerializedPropertyCsvValue(SerializedProperty property, out string value)
+        {
+            value = string.Empty;
+            if (property == null)
+            {
+                return false;
+            }
+
+            switch (property.propertyType)
+            {
+                case SerializedPropertyType.Integer:
+                    value = property.longValue.ToString(CultureInfo.InvariantCulture);
+                    return true;
+                case SerializedPropertyType.Boolean:
+                    value = property.boolValue.ToString();
+                    return true;
+                case SerializedPropertyType.Float:
+                    value = FormatFloat(property.floatValue);
+                    return true;
+                case SerializedPropertyType.String:
+                    value = property.stringValue ?? string.Empty;
+                    return true;
+                case SerializedPropertyType.Color:
+                    value = JoinCsvComponents(
+                        property.colorValue.r,
+                        property.colorValue.g,
+                        property.colorValue.b,
+                        property.colorValue.a);
+                    return true;
+                case SerializedPropertyType.ObjectReference:
+                    value = property.objectReferenceValue == null
+                        ? string.Empty
+                        : AssetDatabase.GetAssetPath(property.objectReferenceValue);
+                    return true;
+                case SerializedPropertyType.LayerMask:
+                    value = property.intValue.ToString(CultureInfo.InvariantCulture);
+                    return true;
+                case SerializedPropertyType.Enum:
+                    if (property.enumValueIndex >= 0 && property.enumValueIndex < property.enumNames.Length)
+                    {
+                        value = property.enumNames[property.enumValueIndex];
+                    }
+                    else
+                    {
+                        value = property.enumValueIndex.ToString(CultureInfo.InvariantCulture);
+                    }
+
+                    return true;
+                case SerializedPropertyType.Vector2:
+                    value = JoinCsvComponents(property.vector2Value.x, property.vector2Value.y);
+                    return true;
+                case SerializedPropertyType.Vector3:
+                    value = JoinCsvComponents(property.vector3Value.x, property.vector3Value.y, property.vector3Value.z);
+                    return true;
+                case SerializedPropertyType.Vector4:
+                    value = JoinCsvComponents(
+                        property.vector4Value.x,
+                        property.vector4Value.y,
+                        property.vector4Value.z,
+                        property.vector4Value.w);
+                    return true;
+                case SerializedPropertyType.Rect:
+                    value = JoinCsvComponents(
+                        property.rectValue.x,
+                        property.rectValue.y,
+                        property.rectValue.width,
+                        property.rectValue.height);
+                    return true;
+                case SerializedPropertyType.Bounds:
+                    value = JoinCsvComponents(
+                        property.boundsValue.center.x,
+                        property.boundsValue.center.y,
+                        property.boundsValue.center.z,
+                        property.boundsValue.size.x,
+                        property.boundsValue.size.y,
+                        property.boundsValue.size.z);
+                    return true;
+                case SerializedPropertyType.Quaternion:
+                    value = JoinCsvComponents(
+                        property.quaternionValue.x,
+                        property.quaternionValue.y,
+                        property.quaternionValue.z,
+                        property.quaternionValue.w);
+                    return true;
+                case SerializedPropertyType.Vector2Int:
+                    value = JoinCsvComponents(property.vector2IntValue.x, property.vector2IntValue.y);
+                    return true;
+                case SerializedPropertyType.Vector3Int:
+                    value = JoinCsvComponents(
+                        property.vector3IntValue.x,
+                        property.vector3IntValue.y,
+                        property.vector3IntValue.z);
+                    return true;
+                case SerializedPropertyType.RectInt:
+                    value = JoinCsvComponents(
+                        property.rectIntValue.x,
+                        property.rectIntValue.y,
+                        property.rectIntValue.width,
+                        property.rectIntValue.height);
+                    return true;
+                case SerializedPropertyType.BoundsInt:
+                    value = JoinCsvComponents(
+                        property.boundsIntValue.position.x,
+                        property.boundsIntValue.position.y,
+                        property.boundsIntValue.position.z,
+                        property.boundsIntValue.size.x,
+                        property.boundsIntValue.size.y,
+                        property.boundsIntValue.size.z);
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private static bool TrySetSerializedPropertyCsvValue(
+            SerializedProperty property,
+            string value,
+            out bool supported,
+            out string error)
+        {
+            supported = true;
+            error = string.Empty;
+            if (property == null)
+            {
+                supported = false;
+                return true;
+            }
+
+            value ??= string.Empty;
+            switch (property.propertyType)
+            {
+                case SerializedPropertyType.Integer:
+                    if (!TryParseCsvLong(value, out long longValue))
+                    {
+                        error = $"expected an integer value, got \"{value}\".";
+                        return false;
+                    }
+
+                    property.longValue = longValue;
+                    return true;
+                case SerializedPropertyType.Boolean:
+                    if (!TryParseCsvBool(value, out bool boolValue))
+                    {
+                        error = $"expected a boolean value, got \"{value}\".";
+                        return false;
+                    }
+
+                    property.boolValue = boolValue;
+                    return true;
+                case SerializedPropertyType.Float:
+                    if (!TryParseCsvFloat(value, out float floatValue))
+                    {
+                        error = $"expected a numeric value, got \"{value}\".";
+                        return false;
+                    }
+
+                    property.floatValue = floatValue;
+                    return true;
+                case SerializedPropertyType.String:
+                    property.stringValue = value;
+                    return true;
+                case SerializedPropertyType.Color:
+                    if (!TryParseCsvColor(value, out Color colorValue))
+                    {
+                        error = $"expected a color value as r;g;b;a or #RRGGBBAA, got \"{value}\".";
+                        return false;
+                    }
+
+                    property.colorValue = colorValue;
+                    return true;
+                case SerializedPropertyType.ObjectReference:
+                    if (string.IsNullOrWhiteSpace(value))
+                    {
+                        property.objectReferenceValue = null;
+                        return true;
+                    }
+
+                    UnityEngine.Object reference = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(value);
+                    if (reference == null)
+                    {
+                        error = $"could not load asset reference at \"{value}\".";
+                        return false;
+                    }
+
+                    property.objectReferenceValue = reference;
+                    return true;
+                case SerializedPropertyType.LayerMask:
+                    if (!TryParseCsvInt(value, out int layerMaskValue))
+                    {
+                        error = $"expected a layer mask integer value, got \"{value}\".";
+                        return false;
+                    }
+
+                    property.intValue = layerMaskValue;
+                    return true;
+                case SerializedPropertyType.Enum:
+                    if (!TryParseCsvEnum(property, value, out int enumValueIndex))
+                    {
+                        error = $"expected one of the enum names or an enum index, got \"{value}\".";
+                        return false;
+                    }
+
+                    property.enumValueIndex = enumValueIndex;
+                    return true;
+                case SerializedPropertyType.Vector2:
+                    if (!TryParseCsvFloatComponents(value, 2, out float[] vector2Components))
+                    {
+                        error = $"expected 2 numeric components, got \"{value}\".";
+                        return false;
+                    }
+
+                    property.vector2Value = new Vector2(vector2Components[0], vector2Components[1]);
+                    return true;
+                case SerializedPropertyType.Vector3:
+                    if (!TryParseCsvFloatComponents(value, 3, out float[] vector3Components))
+                    {
+                        error = $"expected 3 numeric components, got \"{value}\".";
+                        return false;
+                    }
+
+                    property.vector3Value = new Vector3(vector3Components[0], vector3Components[1], vector3Components[2]);
+                    return true;
+                case SerializedPropertyType.Vector4:
+                    if (!TryParseCsvFloatComponents(value, 4, out float[] vector4Components))
+                    {
+                        error = $"expected 4 numeric components, got \"{value}\".";
+                        return false;
+                    }
+
+                    property.vector4Value = new Vector4(
+                        vector4Components[0],
+                        vector4Components[1],
+                        vector4Components[2],
+                        vector4Components[3]);
+                    return true;
+                case SerializedPropertyType.Rect:
+                    if (!TryParseCsvFloatComponents(value, 4, out float[] rectComponents))
+                    {
+                        error = $"expected x;y;width;height, got \"{value}\".";
+                        return false;
+                    }
+
+                    property.rectValue = new Rect(rectComponents[0], rectComponents[1], rectComponents[2], rectComponents[3]);
+                    return true;
+                case SerializedPropertyType.Bounds:
+                    if (!TryParseCsvFloatComponents(value, 6, out float[] boundsComponents))
+                    {
+                        error = $"expected center x;y;z and size x;y;z, got \"{value}\".";
+                        return false;
+                    }
+
+                    property.boundsValue = new Bounds(
+                        new Vector3(boundsComponents[0], boundsComponents[1], boundsComponents[2]),
+                        new Vector3(boundsComponents[3], boundsComponents[4], boundsComponents[5]));
+                    return true;
+                case SerializedPropertyType.Quaternion:
+                    if (!TryParseCsvFloatComponents(value, 4, out float[] quaternionComponents))
+                    {
+                        error = $"expected x;y;z;w, got \"{value}\".";
+                        return false;
+                    }
+
+                    property.quaternionValue = new Quaternion(
+                        quaternionComponents[0],
+                        quaternionComponents[1],
+                        quaternionComponents[2],
+                        quaternionComponents[3]);
+                    return true;
+                case SerializedPropertyType.Vector2Int:
+                    if (!TryParseCsvIntComponents(value, 2, out int[] vector2IntComponents))
+                    {
+                        error = $"expected 2 integer components, got \"{value}\".";
+                        return false;
+                    }
+
+                    property.vector2IntValue = new Vector2Int(vector2IntComponents[0], vector2IntComponents[1]);
+                    return true;
+                case SerializedPropertyType.Vector3Int:
+                    if (!TryParseCsvIntComponents(value, 3, out int[] vector3IntComponents))
+                    {
+                        error = $"expected 3 integer components, got \"{value}\".";
+                        return false;
+                    }
+
+                    property.vector3IntValue = new Vector3Int(
+                        vector3IntComponents[0],
+                        vector3IntComponents[1],
+                        vector3IntComponents[2]);
+                    return true;
+                case SerializedPropertyType.RectInt:
+                    if (!TryParseCsvIntComponents(value, 4, out int[] rectIntComponents))
+                    {
+                        error = $"expected x;y;width;height, got \"{value}\".";
+                        return false;
+                    }
+
+                    property.rectIntValue = new RectInt(
+                        rectIntComponents[0],
+                        rectIntComponents[1],
+                        rectIntComponents[2],
+                        rectIntComponents[3]);
+                    return true;
+                case SerializedPropertyType.BoundsInt:
+                    if (!TryParseCsvIntComponents(value, 6, out int[] boundsIntComponents))
+                    {
+                        error = $"expected position x;y;z and size x;y;z, got \"{value}\".";
+                        return false;
+                    }
+
+                    property.boundsIntValue = new BoundsInt(
+                        new Vector3Int(boundsIntComponents[0], boundsIntComponents[1], boundsIntComponents[2]),
+                        new Vector3Int(boundsIntComponents[3], boundsIntComponents[4], boundsIntComponents[5]));
+                    return true;
+                default:
+                    supported = false;
+                    return true;
+            }
+        }
+
+        private static bool TryParseCsvLong(string value, out long result)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                result = 0L;
+                return true;
+            }
+
+            return long.TryParse(value.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out result);
+        }
+
+        private static bool TryParseCsvInt(string value, out int result)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                result = 0;
+                return true;
+            }
+
+            return int.TryParse(value.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out result);
+        }
+
+        private static bool TryParseCsvFloat(string value, out float result)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                result = 0f;
+                return true;
+            }
+
+            return float.TryParse(value.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out result);
+        }
+
+        private static bool TryParseCsvBool(string value, out bool result)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                result = false;
+                return true;
+            }
+
+            string trimmed = value.Trim();
+            if (bool.TryParse(trimmed, out result))
+            {
+                return true;
+            }
+
+            if (double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out double number))
+            {
+                result = Math.Abs(number) > double.Epsilon;
+                return true;
+            }
+
+            result = false;
+            return false;
+        }
+
+        private static bool TryParseCsvEnum(SerializedProperty property, string value, out int enumValueIndex)
+        {
+            enumValueIndex = 0;
+            if (property == null)
+            {
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return true;
+            }
+
+            string trimmed = value.Trim();
+            string[] enumNames = property.enumNames ?? Array.Empty<string>();
+            for (int i = 0; i < enumNames.Length; i++)
+            {
+                if (string.Equals(enumNames[i], trimmed, StringComparison.OrdinalIgnoreCase))
+                {
+                    enumValueIndex = i;
+                    return true;
+                }
+            }
+
+            string[] displayNames = property.enumDisplayNames ?? Array.Empty<string>();
+            for (int i = 0; i < displayNames.Length; i++)
+            {
+                if (string.Equals(displayNames[i], trimmed, StringComparison.OrdinalIgnoreCase))
+                {
+                    enumValueIndex = i;
+                    return true;
+                }
+            }
+
+            if (!int.TryParse(trimmed, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsedIndex))
+            {
+                return false;
+            }
+
+            enumValueIndex = enumNames.Length == 0
+                ? Mathf.Max(0, parsedIndex)
+                : Mathf.Clamp(parsedIndex, 0, enumNames.Length - 1);
+            return true;
+        }
+
+        private static bool TryParseCsvColor(string value, out Color color)
+        {
+            color = Color.white;
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                color = new Color(0f, 0f, 0f, 0f);
+                return true;
+            }
+
+            string trimmed = value.Trim();
+            if (!trimmed.StartsWith("#", StringComparison.Ordinal)
+                && (trimmed.Length == 6 || trimmed.Length == 8)
+                && IsHexString(trimmed))
+            {
+                trimmed = "#" + trimmed;
+            }
+
+            if (trimmed.StartsWith("#", StringComparison.Ordinal)
+                && ColorUtility.TryParseHtmlString(trimmed, out color))
+            {
+                return true;
+            }
+
+            if (!TryParseCsvFloatComponents(value, 4, out float[] components))
+            {
+                return false;
+            }
+
+            color = new Color(components[0], components[1], components[2], components[3]);
+            return true;
+        }
+
+        private static bool IsHexString(string value)
+        {
+            foreach (char character in value)
+            {
+                bool isHex = (character >= '0' && character <= '9')
+                    || (character >= 'a' && character <= 'f')
+                    || (character >= 'A' && character <= 'F');
+                if (!isHex)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static bool TryParseCsvFloatComponents(string value, int count, out float[] components)
+        {
+            components = new float[count];
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return true;
+            }
+
+            string[] parts = SplitCsvComponents(value);
+            if (parts.Length != count)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                if (!float.TryParse(parts[i], NumberStyles.Float, CultureInfo.InvariantCulture, out components[i]))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static bool TryParseCsvIntComponents(string value, int count, out int[] components)
+        {
+            components = new int[count];
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return true;
+            }
+
+            string[] parts = SplitCsvComponents(value);
+            if (parts.Length != count)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                if (!int.TryParse(parts[i], NumberStyles.Integer, CultureInfo.InvariantCulture, out components[i]))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static string[] SplitCsvComponents(string value)
+        {
+            string normalized = (value ?? string.Empty)
+                .Trim()
+                .Trim('(', ')', '[', ']');
+            return normalized.Split(
+                new[] { ';', ',', '|' },
+                StringSplitOptions.RemoveEmptyEntries);
+        }
+
+        private static string JoinCsvComponents(params float[] components)
+        {
+            string[] parts = new string[components.Length];
+            for (int i = 0; i < components.Length; i++)
+            {
+                parts[i] = FormatFloat(components[i]);
+            }
+
+            return string.Join(";", parts);
+        }
+
+        private static string JoinCsvComponents(params int[] components)
+        {
+            string[] parts = new string[components.Length];
+            for (int i = 0; i < components.Length; i++)
+            {
+                parts[i] = components[i].ToString(CultureInfo.InvariantCulture);
+            }
+
+            return string.Join(";", parts);
+        }
+
+        private static string FormatFloat(float value)
+        {
+            return value.ToString("R", CultureInfo.InvariantCulture);
+        }
+
         private void RecreateWorkingCopy()
         {
             DestroyWorkingCopy();
@@ -3543,7 +4761,8 @@ namespace SpreadAsset.Editor
                     column.PropertyName ?? string.Empty,
                     column.SchemaName ?? string.Empty,
                     column.TypeName ?? string.Empty,
-                    column.IsDesignField ? "1" : "0"));
+                    column.IsDesignField ? "1" : "0",
+                    column.IsKeyField ? "1" : "0"));
             }
 
             return string.Join("\n", parts);
@@ -3873,6 +5092,7 @@ namespace SpreadAsset.Editor
                     field.TypeName,
                     field.Name,
                     field.IsDesignField,
+                    field.IsKeyField,
                     field.Id));
             }
 
@@ -4009,12 +5229,27 @@ namespace SpreadAsset.Editor
             string typeName,
             string schemaName = "",
             bool isDesignField = false,
+            bool isKeyField = false,
             string fieldId = "")
         {
             string displayTypeName = GetColumnTypeDisplayName(typeName);
-            string typeLabel = isDesignField && !string.IsNullOrEmpty(displayTypeName)
-                ? $"{displayTypeName}, design"
-                : displayTypeName;
+            List<string> typeLabels = new List<string>();
+            if (!string.IsNullOrEmpty(displayTypeName))
+            {
+                typeLabels.Add(displayTypeName);
+            }
+
+            if (isKeyField)
+            {
+                typeLabels.Add("key");
+            }
+
+            if (isDesignField)
+            {
+                typeLabels.Add("design");
+            }
+
+            string typeLabel = string.Join(", ", typeLabels);
             string headerLabel = string.IsNullOrEmpty(typeLabel) ? displayName : $"{displayName}\n{typeLabel}";
             return new TableColumn(
                 propertyName,
@@ -4024,6 +5259,7 @@ namespace SpreadAsset.Editor
                 CalculateColumnWidth(headerLabel),
                 schemaName,
                 isDesignField,
+                isKeyField,
                 fieldId);
         }
 
@@ -4686,6 +5922,71 @@ namespace SpreadAsset.Editor
             }
         }
 
+        private readonly struct CsvColumnBinding
+        {
+            public readonly string Header;
+            public readonly int ColumnIndex;
+
+            public CsvColumnBinding(string header, int columnIndex)
+            {
+                Header = header ?? string.Empty;
+                ColumnIndex = columnIndex;
+            }
+        }
+
+        private readonly struct CsvImportColumn
+        {
+            public readonly int SourceColumnIndex;
+            public readonly int TargetColumnIndex;
+            public readonly string Header;
+
+            public CsvImportColumn(int sourceColumnIndex, int targetColumnIndex, string header)
+            {
+                SourceColumnIndex = sourceColumnIndex;
+                TargetColumnIndex = targetColumnIndex;
+                Header = header ?? string.Empty;
+            }
+        }
+
+        private readonly struct CsvImportPlan
+        {
+            public readonly int HeaderRowIndex;
+            public readonly int DataStartRowIndex;
+            public readonly int DataEndRowIndex;
+            public readonly List<CsvImportColumn> Columns;
+            public readonly int UnknownHeaderCount;
+
+            public CsvImportPlan(
+                int headerRowIndex,
+                int dataStartRowIndex,
+                int dataEndRowIndex,
+                List<CsvImportColumn> columns,
+                int unknownHeaderCount)
+            {
+                HeaderRowIndex = headerRowIndex;
+                DataStartRowIndex = dataStartRowIndex;
+                DataEndRowIndex = dataEndRowIndex;
+                Columns = columns ?? new List<CsvImportColumn>();
+                UnknownHeaderCount = unknownHeaderCount;
+            }
+
+            public int RowCount => Mathf.Max(0, DataEndRowIndex - DataStartRowIndex);
+        }
+
+        private readonly struct CsvImportSummary
+        {
+            public readonly int RowCount;
+            public readonly int UnknownHeaderCount;
+            public readonly int UnsupportedCellCount;
+
+            public CsvImportSummary(int rowCount, int unknownHeaderCount, int unsupportedCellCount)
+            {
+                RowCount = rowCount;
+                UnknownHeaderCount = unknownHeaderCount;
+                UnsupportedCellCount = unsupportedCellCount;
+            }
+        }
+
         private sealed class FormulaSheetCache
         {
             private readonly int _rowCount;
@@ -4730,6 +6031,7 @@ namespace SpreadAsset.Editor
             public readonly float Width;
             public readonly string SchemaName;
             public readonly bool IsDesignField;
+            public readonly bool IsKeyField;
             public readonly string FieldId;
 
             public TableColumn(
@@ -4740,6 +6042,7 @@ namespace SpreadAsset.Editor
                 float width,
                 string schemaName,
                 bool isDesignField,
+                bool isKeyField,
                 string fieldId)
             {
                 PropertyName = propertyName;
@@ -4749,6 +6052,7 @@ namespace SpreadAsset.Editor
                 Width = width;
                 SchemaName = schemaName;
                 IsDesignField = isDesignField;
+                IsKeyField = isKeyField;
                 FieldId = fieldId ?? string.Empty;
             }
 
@@ -4762,6 +6066,7 @@ namespace SpreadAsset.Editor
                     width,
                     SchemaName,
                     IsDesignField,
+                    IsKeyField,
                     FieldId);
             }
         }

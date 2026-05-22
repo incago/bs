@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using UnityEditor;
@@ -64,6 +65,14 @@ namespace SpreadAsset.Editor
                 AppendSerializedField(builder, table.RowTypeName + "[]", table.FieldName, $"new {table.RowTypeName}[0]");
             }
 
+            foreach (SpreadAssetSchemaTable table in request.Schema.Tables)
+            {
+                foreach (SpreadAssetSchemaField keyField in GetKeyFields(table))
+                {
+                    AppendKeyLookupCacheField(builder, table, keyField);
+                }
+            }
+
             if (request.Schema.Fields.Length > 0 || request.Schema.Tables.Length > 0)
             {
                 builder.AppendLine();
@@ -77,6 +86,21 @@ namespace SpreadAsset.Editor
             foreach (SpreadAssetSchemaTable table in request.Schema.Tables)
             {
                 AppendGetter(builder, table.RowTypeName + "[]", table.FieldName);
+            }
+
+            foreach (SpreadAssetSchemaTable table in request.Schema.Tables)
+            {
+                foreach (SpreadAssetSchemaField keyField in GetKeyFields(table))
+                {
+                    builder.AppendLine();
+                    AppendKeyLookupMethods(builder, table, keyField);
+                }
+            }
+
+            if (HasAnyKeyField(request.Schema.Tables))
+            {
+                builder.AppendLine();
+                AppendClearLookupCaches(builder, request.Schema.Tables);
             }
 
             builder.AppendLine("    }");
@@ -192,6 +216,11 @@ namespace SpreadAsset.Editor
                     builder.Append(", IsDesignField = true");
                 }
 
+                if (field.IsKeyField)
+                {
+                    builder.Append(", IsKeyField = true");
+                }
+
                 builder.AppendLine(" },");
             }
 
@@ -254,6 +283,10 @@ namespace SpreadAsset.Editor
                 {
                     ValidateTypeName(field.TypeName, field.Name);
                     ValidateIdentifier(SpreadAssetNameUtility.ToPascalCase(field.Name), "Data field name");
+                    if (field.IsDesignField && field.IsKeyField)
+                    {
+                        throw new ArgumentException($"Data field {field.Name} cannot be both a key and a design field.");
+                    }
                 }
             }
         }
@@ -274,6 +307,173 @@ namespace SpreadAsset.Editor
             }
 
             return false;
+        }
+
+        private static IEnumerable<SpreadAssetSchemaField> GetKeyFields(SpreadAssetSchemaTable table)
+        {
+            if (table?.Fields == null)
+            {
+                yield break;
+            }
+
+            foreach (SpreadAssetSchemaField field in table.Fields)
+            {
+                if (field != null && field.IsKeyField && !field.IsDesignField)
+                {
+                    yield return field;
+                }
+            }
+        }
+
+        private static bool HasAnyKeyField(SpreadAssetSchemaTable[] tables)
+        {
+            if (tables == null)
+            {
+                return false;
+            }
+
+            foreach (SpreadAssetSchemaTable table in tables)
+            {
+                foreach (SpreadAssetSchemaField _ in GetKeyFields(table))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static void AppendKeyLookupCacheField(
+            StringBuilder builder,
+            SpreadAssetSchemaTable table,
+            SpreadAssetSchemaField keyField)
+        {
+            builder.AppendLine($"        [System.NonSerialized] private System.Collections.Generic.Dictionary<{keyField.TypeName}, {table.RowTypeName}> {GetKeyLookupFieldName(table, keyField)};");
+        }
+
+        private static void AppendKeyLookupMethods(
+            StringBuilder builder,
+            SpreadAssetSchemaTable table,
+            SpreadAssetSchemaField keyField)
+        {
+            string lookupFieldName = GetKeyLookupFieldName(table, keyField);
+            string lookupMethodName = GetKeyLookupMethodName(table, keyField);
+            string rowVariableName = "row";
+            string arrayFieldName = SpreadAssetNameUtility.ToSerializedFieldName(table.FieldName);
+            string keyPropertyName = SpreadAssetNameUtility.ToPascalCase(keyField.Name);
+            string tryGetMethodName = GetTryGetByKeyMethodName(table, keyField);
+            string getMethodName = GetGetByKeyMethodName(table, keyField);
+
+            builder.AppendLine($"        public bool {tryGetMethodName}({keyField.TypeName} key, out {table.RowTypeName} value)");
+            builder.AppendLine("        {");
+            if (IsNullKeyCheckRequired(keyField.TypeName))
+            {
+                builder.AppendLine("            if (key == null)");
+                builder.AppendLine("            {");
+                builder.AppendLine("                value = default;");
+                builder.AppendLine("                return false;");
+                builder.AppendLine("            }");
+                builder.AppendLine();
+            }
+
+            builder.AppendLine($"            return {lookupMethodName}().TryGetValue(key, out value);");
+            builder.AppendLine("        }");
+            builder.AppendLine();
+            builder.AppendLine($"        public {table.RowTypeName} {getMethodName}({keyField.TypeName} key)");
+            builder.AppendLine("        {");
+            builder.AppendLine($"            {tryGetMethodName}(key, out {table.RowTypeName} value);");
+            builder.AppendLine("            return value;");
+            builder.AppendLine("        }");
+            builder.AppendLine();
+            builder.AppendLine($"        private System.Collections.Generic.Dictionary<{keyField.TypeName}, {table.RowTypeName}> {lookupMethodName}()");
+            builder.AppendLine("        {");
+            builder.AppendLine($"            if ({lookupFieldName} != null)");
+            builder.AppendLine("            {");
+            builder.AppendLine($"                return {lookupFieldName};");
+            builder.AppendLine("            }");
+            builder.AppendLine();
+            builder.AppendLine($"            {lookupFieldName} = new System.Collections.Generic.Dictionary<{keyField.TypeName}, {table.RowTypeName}>();");
+            builder.AppendLine($"            if ({arrayFieldName} == null)");
+            builder.AppendLine("            {");
+            builder.AppendLine($"                return {lookupFieldName};");
+            builder.AppendLine("            }");
+            builder.AppendLine();
+            builder.AppendLine($"            foreach ({table.RowTypeName} {rowVariableName} in {arrayFieldName})");
+            builder.AppendLine("            {");
+            builder.AppendLine($"                if ({rowVariableName} == null)");
+            builder.AppendLine("                {");
+            builder.AppendLine("                    continue;");
+            builder.AppendLine("                }");
+
+            if (IsNullKeyCheckRequired(keyField.TypeName))
+            {
+                builder.AppendLine();
+                builder.AppendLine($"                {keyField.TypeName} rowKey = {rowVariableName}.{keyPropertyName};");
+                builder.AppendLine("                if (rowKey == null)");
+                builder.AppendLine("                {");
+                builder.AppendLine("                    continue;");
+                builder.AppendLine("                }");
+                builder.AppendLine();
+                builder.AppendLine($"                {lookupFieldName}[rowKey] = {rowVariableName};");
+            }
+            else
+            {
+                builder.AppendLine($"                {lookupFieldName}[{rowVariableName}.{keyPropertyName}] = {rowVariableName};");
+            }
+
+            builder.AppendLine("            }");
+            builder.AppendLine();
+            builder.AppendLine($"            return {lookupFieldName};");
+            builder.AppendLine("        }");
+        }
+
+        private static void AppendClearLookupCaches(
+            StringBuilder builder,
+            SpreadAssetSchemaTable[] tables)
+        {
+            builder.AppendLine("        public void ClearLookupCaches()");
+            builder.AppendLine("        {");
+            foreach (SpreadAssetSchemaTable table in tables)
+            {
+                foreach (SpreadAssetSchemaField keyField in GetKeyFields(table))
+                {
+                    builder.AppendLine($"            {GetKeyLookupFieldName(table, keyField)} = null;");
+                }
+            }
+
+            builder.AppendLine("        }");
+            builder.AppendLine();
+            builder.AppendLine("        private void OnEnable()");
+            builder.AppendLine("        {");
+            builder.AppendLine("            ClearLookupCaches();");
+            builder.AppendLine("        }");
+        }
+
+        private static string GetKeyLookupFieldName(SpreadAssetSchemaTable table, SpreadAssetSchemaField keyField)
+        {
+            return SpreadAssetNameUtility.ToSerializedFieldName(table.FieldName + "By" + keyField.Name);
+        }
+
+        private static string GetKeyLookupMethodName(SpreadAssetSchemaTable table, SpreadAssetSchemaField keyField)
+        {
+            return "Get" + SpreadAssetNameUtility.ToPascalCase(table.FieldName) + "By" + SpreadAssetNameUtility.ToPascalCase(keyField.Name) + "Lookup";
+        }
+
+        private static string GetTryGetByKeyMethodName(SpreadAssetSchemaTable table, SpreadAssetSchemaField keyField)
+        {
+            return "TryGet" + SpreadAssetNameUtility.ToPascalCase(table.RowTypeName) + "By" + SpreadAssetNameUtility.ToPascalCase(keyField.Name);
+        }
+
+        private static string GetGetByKeyMethodName(SpreadAssetSchemaTable table, SpreadAssetSchemaField keyField)
+        {
+            return "Get" + SpreadAssetNameUtility.ToPascalCase(table.RowTypeName) + "By" + SpreadAssetNameUtility.ToPascalCase(keyField.Name);
+        }
+
+        private static bool IsNullKeyCheckRequired(string typeName)
+        {
+            string normalizedTypeName = (typeName ?? string.Empty).Trim();
+            return string.Equals(normalizedTypeName, "string", StringComparison.Ordinal)
+                || string.Equals(normalizedTypeName, "System.String", StringComparison.Ordinal);
         }
 
         private static void ValidateIdentifier(string identifier, string label)

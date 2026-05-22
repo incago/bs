@@ -31,6 +31,7 @@ namespace SpreadAsset.Editor
         public string TypeName = string.Empty;
         public string Name = string.Empty;
         public bool IsDesignField;
+        public bool IsKeyField;
     }
 
     [Serializable]

@@ -13,7 +13,8 @@
                 "Id": "field_44363b49812899c2",
                 "TypeName": "string",
                 "Name": "CharacterType",
-                "IsDesignField": false
+                "IsDesignField": false,
+                "IsKeyField": false
             }
         ],
         "Tables": [
@@ -25,79 +26,92 @@
                         "Id": "field_a631c88c0301bb17",
                         "TypeName": "int",
                         "Name": "Id",
-                        "IsDesignField": false
+                        "IsDesignField": false,
+                        "IsKeyField": true
                     },
                     {
                         "Id": "field_8b3423c2c8dfe2fd",
                         "TypeName": "string",
                         "Name": "Name",
-                        "IsDesignField": true
+                        "IsDesignField": true,
+                        "IsKeyField": false
                     },
                     {
                         "Id": "field_d65905368e261141",
                         "TypeName": "float",
                         "Name": "Weight",
-                        "IsDesignField": false
+                        "IsDesignField": false,
+                        "IsKeyField": false
                     },
                     {
                         "Id": "field_0a7bcfc06e89ec59",
                         "TypeName": "string",
                         "Name": "ResourceName",
-                        "IsDesignField": true
+                        "IsDesignField": true,
+                        "IsKeyField": false
                     },
                     {
                         "Id": "field_455eb383716f6c95",
                         "TypeName": "string",
                         "Name": "ThumbnailResourceKey",
-                        "IsDesignField": false
+                        "IsDesignField": false,
+                        "IsKeyField": false
                     },
                     {
                         "Id": "field_ddb02aa0036591a6",
                         "TypeName": "string",
                         "Name": "SpineResourceKey",
-                        "IsDesignField": false
+                        "IsDesignField": false,
+                        "IsKeyField": false
                     },
                     {
                         "Id": "field_0bd143838be7506c",
                         "TypeName": "Vector3",
                         "Name": "ResourceOffset",
-                        "IsDesignField": false
+                        "IsDesignField": false,
+                        "IsKeyField": false
                     },
                     {
                         "Id": "field_48f02033e91fd8b1",
                         "TypeName": "float",
                         "Name": "RunSpeed",
-                        "IsDesignField": false
+                        "IsDesignField": false,
+                        "IsKeyField": false
                     },
                     {
                         "Id": "field_a81b74f1d5de0cda",
                         "TypeName": "float",
                         "Name": "ActionCooldown",
-                        "IsDesignField": false
+                        "IsDesignField": false,
+                        "IsKeyField": false
                     },
                     {
                         "Id": "field_5bca0e7beace5aac",
                         "TypeName": "float",
                         "Name": "AttackCooldown",
-                        "IsDesignField": false
+                        "IsDesignField": false,
+                        "IsKeyField": false
                     },
                     {
                         "Id": "field_b12897b423e37463",
                         "TypeName": "float",
                         "Name": "HealthPoint",
-                        "IsDesignField": false
+                        "IsDesignField": false,
+                        "IsKeyField": false
                     },
                     {
                         "Id": "field_e03f3a7f3ed6b31d",
                         "TypeName": "float",
                         "Name": "AttackPoint",
-                        "IsDesignField": false
+                        "IsDesignField": false,
+                        "IsKeyField": false
                     },
                     {
                         "Id": "field_23821483e69b45f8a8eb91daf87df363",
                         "TypeName": "SpreadAsset.NotGenerated.UserEnum",
                         "Name": "UserEnum",
-                        "IsDesignField": false
+                        "IsDesignField": false,
+                        "IsKeyField": false
                     }
                 ]
             },
@@ -109,31 +123,36 @@
                         "Id": "field_84f1401280d5777f",
                         "TypeName": "int",
                         "Name": "Id",
-                        "IsDesignField": false
+                        "IsDesignField": false,
+                        "IsKeyField": true
                     },
                     {
                         "Id": "field_fb1d12c6907c4c06b7a3a9968d6c85e8",
                         "TypeName": "string",
                         "Name": "Name",
-                        "IsDesignField": false
+                        "IsDesignField": false,
+                        "IsKeyField": false
                     },
                     {
                         "Id": "field_c5992b76da9b4636985f312244e85aa7",
                         "TypeName": "int",
                         "Name": "Cost",
-                        "IsDesignField": false
+                        "IsDesignField": false,
+                        "IsKeyField": false
                     },
                     {
                         "Id": "field_1c819ce986d0429b92b1179d3b1ca927",
                         "TypeName": "float",
                         "Name": "Cooldown",
-                        "IsDesignField": false
+                        "IsDesignField": false,
+                        "IsKeyField": false
                     },
                     {
                         "Id": "field_0eb51c09d9fe44fb87775c534584b079",
                         "TypeName": "float",
                         "Name": "Duration",
-                        "IsDesignField": false
+                        "IsDesignField": false,
+                        "IsKeyField": false
                     }
                 ]
             }

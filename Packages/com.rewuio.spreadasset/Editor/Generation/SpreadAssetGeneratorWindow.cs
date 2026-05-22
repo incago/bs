@@ -58,7 +58,7 @@ namespace SpreadAsset.Editor
             if (_tables.Count == 0)
             {
                 TableDraft table = new TableDraft("ItemData", "ItemDatas");
-                table.Fields.Add(new FieldDraft("int", "Id"));
+                table.Fields.Add(new FieldDraft("int", "Id", isKeyField: true));
                 table.Fields.Add(new FieldDraft("float", "Weight"));
                 _tables.Add(table);
             }
@@ -150,7 +150,7 @@ namespace SpreadAsset.Editor
                 if (GUILayout.Button("Add Array Data"))
                 {
                     TableDraft table = new TableDraft("NewData", "NewDatas");
-                    table.Fields.Add(new FieldDraft("int", "Id"));
+                    table.Fields.Add(new FieldDraft("int", "Id", isKeyField: true));
                     _tables.Add(table);
                 }
             }
@@ -201,10 +201,31 @@ namespace SpreadAsset.Editor
                 field.Name = EditorGUILayout.TextField(field.Name, GUILayout.MinWidth(120));
                 if (allowDesignField)
                 {
-                    field.IsDesignField = EditorGUILayout.ToggleLeft(
+                    bool nextKeyField = EditorGUILayout.ToggleLeft(
+                        "Key",
+                        field.IsKeyField,
+                        GUILayout.Width(56));
+                    if (nextKeyField != field.IsKeyField)
+                    {
+                        field.IsKeyField = nextKeyField;
+                        if (field.IsKeyField)
+                        {
+                            field.IsDesignField = false;
+                        }
+                    }
+
+                    bool nextDesignField = EditorGUILayout.ToggleLeft(
                         "Design",
                         field.IsDesignField,
                         GUILayout.Width(72));
+                    if (nextDesignField != field.IsDesignField)
+                    {
+                        field.IsDesignField = nextDesignField;
+                        if (field.IsDesignField)
+                        {
+                            field.IsKeyField = false;
+                        }
+                    }
 
                     using (new EditorGUI.DisabledScope(index <= 0))
                     {
@@ -469,12 +490,14 @@ namespace SpreadAsset.Editor
             {
                 return SpreadAssetSchemaUtility.AreSameFieldId(previousField, nextField)
                     && string.Equals(NormalizeTypeName(previousField.TypeName), NormalizeTypeName(nextField.TypeName), StringComparison.Ordinal)
-                    && previousField.IsDesignField == nextField.IsDesignField;
+                    && previousField.IsDesignField == nextField.IsDesignField
+                    && previousField.IsKeyField == nextField.IsKeyField;
             }
 
             return IsSameSchemaName(previousField.Name, nextField.Name)
                 && string.Equals(NormalizeTypeName(previousField.TypeName), NormalizeTypeName(nextField.TypeName), StringComparison.Ordinal)
-                && previousField.IsDesignField == nextField.IsDesignField;
+                && previousField.IsDesignField == nextField.IsDesignField
+                && previousField.IsKeyField == nextField.IsKeyField;
         }
 
         private static bool IsSameSchemaName(string left, string right)
@@ -507,8 +530,19 @@ namespace SpreadAsset.Editor
                     continue;
                 }
 
-                string designLabel = field.IsDesignField ? ", design" : string.Empty;
-                labels.Add($"{GetColumnName(i)} {field.Name}({field.TypeName}{designLabel})");
+                List<string> flags = new List<string>();
+                if (field.IsKeyField)
+                {
+                    flags.Add("key");
+                }
+
+                if (field.IsDesignField)
+                {
+                    flags.Add("design");
+                }
+
+                string flagLabel = flags.Count == 0 ? string.Empty : ", " + string.Join(", ", flags);
+                labels.Add($"{GetColumnName(i)} {field.Name}({field.TypeName}{flagLabel})");
             }
 
             return string.Join(", ", labels);
@@ -551,7 +585,7 @@ namespace SpreadAsset.Editor
             _assetFields.Clear();
             foreach (SpreadAssetSchemaField field in request.Schema.Fields)
             {
-                _assetFields.Add(new FieldDraft(field.TypeName, field.Name, false, field.Id));
+                _assetFields.Add(new FieldDraft(field.TypeName, field.Name, false, false, field.Id));
             }
 
             _tables.Clear();
@@ -560,7 +594,12 @@ namespace SpreadAsset.Editor
                 TableDraft tableDraft = new TableDraft(table.RowTypeName, table.FieldName);
                 foreach (SpreadAssetSchemaField field in table.Fields)
                 {
-                    tableDraft.Fields.Add(new FieldDraft(field.TypeName, field.Name, field.IsDesignField, field.Id));
+                    tableDraft.Fields.Add(new FieldDraft(
+                        field.TypeName,
+                        field.Name,
+                        field.IsDesignField,
+                        field.IsKeyField,
+                        field.Id));
                 }
 
                 _tables.Add(tableDraft);
@@ -606,7 +645,8 @@ namespace SpreadAsset.Editor
                         : field.Id.Trim(),
                     TypeName = field.TypeName.Trim(),
                     Name = SpreadAssetNameUtility.ToPascalCase(field.Name),
-                    IsDesignField = field.IsDesignField
+                    IsDesignField = field.IsDesignField,
+                    IsKeyField = field.IsDesignField ? false : field.IsKeyField
                 });
             }
 
@@ -640,13 +680,20 @@ namespace SpreadAsset.Editor
             public string TypeName;
             public string Name;
             public bool IsDesignField;
+            public bool IsKeyField;
             public string Id;
 
-            public FieldDraft(string typeName, string name, bool isDesignField = false, string id = "")
+            public FieldDraft(
+                string typeName,
+                string name,
+                bool isDesignField = false,
+                bool isKeyField = false,
+                string id = "")
             {
                 TypeName = typeName;
                 Name = name;
                 IsDesignField = isDesignField;
+                IsKeyField = isDesignField ? false : isKeyField;
                 Id = string.IsNullOrWhiteSpace(id)
                     ? SpreadAssetSchemaUtility.CreateNewFieldId()
                     : id.Trim();
