@@ -25,6 +25,7 @@ namespace SpreadAsset.Editor
         private const float TableLayoutPadding = 6f;
         private const float CellControlHorizontalPadding = 4f;
         private const string CellControlPrefix = "SpreadAsset Editor.Cell.";
+        private const string SearchControlName = "SpreadAsset Editor.Search";
 
         private IMGUIContainer _imguiContainer;
         private string _documentPath;
@@ -39,10 +40,16 @@ namespace SpreadAsset.Editor
         private int _selectedArrayIndex;
         private bool _showAssetFields = true;
         private bool _showFormulaList = true;
+        private bool _showSearchPanel = true;
         private bool _isDocumentDirty;
         private string _formulaError;
+        private string _searchQuery = string.Empty;
+        private string _searchStatus = string.Empty;
         private string _pendingFormulaFocusControlName;
         private string _pendingCellFocusControlName;
+        private string _pendingCellScrollArrayPropertyPath;
+        private int _pendingCellScrollRowIndex = -1;
+        private int _pendingCellScrollColumnIndex = -1;
         private string _focusedCellArrayPropertyPath;
         private int _focusedCellRowIndex = -1;
         private int _focusedCellColumnIndex = -1;
@@ -132,8 +139,11 @@ namespace SpreadAsset.Editor
             _selectedArrayIndex = 0;
             _isDocumentDirty = false;
             _formulaError = string.Empty;
+            _searchQuery = string.Empty;
+            _searchStatus = string.Empty;
             _pendingFormulaFocusControlName = string.Empty;
             _pendingCellFocusControlName = string.Empty;
+            ClearPendingCellScroll();
             ClearFocusedCell();
             _formulaDrafts.Clear();
             _formulaSheetCaches.Clear();
@@ -383,6 +393,7 @@ namespace SpreadAsset.Editor
             List<TableColumn> columns = GetColumns(arrayProperty);
             SpreadAssetSheetState sheetState = GetOrCreateSheetState(arrayProperty);
             DrawFormulaPanel(arrayProperty, columns, sheetState);
+            DrawSearchPanel(arrayProperty, columns, sheetState);
         }
 
         private void DrawSelectedArrayTable()
@@ -493,6 +504,332 @@ namespace SpreadAsset.Editor
                     ApplyFormulas(arrayProperty, columns, sheetState, markDirty: true, forceRecompile: true);
                 }
             }
+        }
+
+        private void DrawSearchPanel(
+            SerializedProperty arrayProperty,
+            List<TableColumn> columns,
+            SpreadAssetSheetState sheetState)
+        {
+            EditorGUILayout.Space(4);
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                _showSearchPanel = EditorGUILayout.Foldout(_showSearchPanel, "Search", true);
+                if (!_showSearchPanel)
+                {
+                    return;
+                }
+
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    EditorGUI.BeginChangeCheck();
+                    GUI.SetNextControlName(SearchControlName);
+                    string nextQuery = EditorGUILayout.TextField("Text", _searchQuery ?? string.Empty);
+                    if (EditorGUI.EndChangeCheck())
+                    {
+                        _searchQuery = nextQuery ?? string.Empty;
+                    }
+
+                    if (GUILayout.Button("Previous", GUILayout.Width(82)))
+                    {
+                        FocusSearchMatch(arrayProperty, columns, sheetState, SearchDirection.Previous);
+                    }
+
+                    if (GUILayout.Button("Next", GUILayout.Width(64)))
+                    {
+                        FocusSearchMatch(arrayProperty, columns, sheetState, SearchDirection.Next);
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(_searchStatus))
+                {
+                    EditorGUILayout.LabelField(_searchStatus, EditorStyles.miniLabel);
+                }
+            }
+        }
+
+        private void FocusSearchMatch(
+            SerializedProperty arrayProperty,
+            List<TableColumn> columns,
+            SpreadAssetSheetState sheetState,
+            SearchDirection direction)
+        {
+            string query = _searchQuery ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                return;
+            }
+
+            if (arrayProperty == null || arrayProperty.arraySize == 0)
+            {
+                _searchStatus = "No rows to search.";
+                return;
+            }
+
+            if (!TryFindSearchMatch(
+                    arrayProperty,
+                    columns,
+                    sheetState,
+                    query,
+                    direction,
+                    out int rowIndex,
+                    out int columnIndex))
+            {
+                _searchStatus = CreateSearchMissStatus(query, direction);
+                return;
+            }
+
+            string controlName = GetCellControlName(arrayProperty.propertyPath, rowIndex, columnIndex);
+            RequestCellFocus(controlName, rowIndex, columns, columnIndex);
+            _searchStatus = $"Found {GetCellAddress(rowIndex, columnIndex)}.";
+        }
+
+        private bool TryFindSearchMatch(
+            SerializedProperty arrayProperty,
+            List<TableColumn> columns,
+            SpreadAssetSheetState sheetState,
+            string query,
+            SearchDirection direction,
+            out int rowIndex,
+            out int columnIndex)
+        {
+            rowIndex = -1;
+            columnIndex = -1;
+
+            int rowCount = arrayProperty?.arraySize ?? 0;
+            int columnCount = GetSearchColumnCount(columns);
+            int cellCount = rowCount * columnCount;
+            if (rowCount == 0 || cellCount == 0)
+            {
+                return false;
+            }
+
+            int startIndex = GetSearchStartIndex(arrayProperty.propertyPath, rowCount, columnCount, direction);
+            int step = direction == SearchDirection.Previous ? -1 : 1;
+            for (int index = startIndex; index >= 0 && index < cellCount; index += step)
+            {
+                int candidateRow = index / columnCount;
+                int candidateColumn = index % columnCount;
+                if (CellMatchesSearch(arrayProperty, columns, sheetState, candidateRow, candidateColumn, query))
+                {
+                    rowIndex = candidateRow;
+                    columnIndex = candidateColumn;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private int GetSearchStartIndex(
+            string arrayPropertyPath,
+            int rowCount,
+            int columnCount,
+            SearchDirection direction)
+        {
+            if (direction == SearchDirection.First)
+            {
+                return 0;
+            }
+
+            int cellCount = rowCount * columnCount;
+            if (!TryGetFocusedCellPosition(arrayPropertyPath, out int rowIndex, out int columnIndex)
+                || rowIndex < 0
+                || rowIndex >= rowCount
+                || columnIndex < 0
+                || columnIndex >= columnCount)
+            {
+                return direction == SearchDirection.Previous ? cellCount - 1 : 0;
+            }
+
+            int focusedIndex = rowIndex * columnCount + columnIndex;
+            return focusedIndex + (direction == SearchDirection.Previous ? -1 : 1);
+        }
+
+        private static string CreateSearchMissStatus(string query, SearchDirection direction)
+        {
+            switch (direction)
+            {
+                case SearchDirection.Previous:
+                    return $"No previous cell contains \"{query}\".";
+                case SearchDirection.Next:
+                    return $"No next cell contains \"{query}\".";
+                default:
+                    return $"No cells contain \"{query}\".";
+            }
+        }
+
+        private static int GetSearchColumnCount(List<TableColumn> columns)
+        {
+            return columns == null || columns.Count == 0 ? 1 : columns.Count;
+        }
+
+        private static bool CellMatchesSearch(
+            SerializedProperty arrayProperty,
+            List<TableColumn> columns,
+            SpreadAssetSheetState sheetState,
+            int rowIndex,
+            int columnIndex,
+            string query)
+        {
+            if (!TryGetCellSearchText(arrayProperty, columns, sheetState, rowIndex, columnIndex, out string value)
+                || string.IsNullOrEmpty(value))
+            {
+                return false;
+            }
+
+            return value.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static bool TryGetCellSearchText(
+            SerializedProperty arrayProperty,
+            List<TableColumn> columns,
+            SpreadAssetSheetState sheetState,
+            int rowIndex,
+            int columnIndex,
+            out string value)
+        {
+            value = string.Empty;
+            if (arrayProperty == null || rowIndex < 0 || rowIndex >= arrayProperty.arraySize)
+            {
+                return false;
+            }
+
+            SerializedProperty element = arrayProperty.GetArrayElementAtIndex(rowIndex);
+            if (columns == null || columns.Count == 0)
+            {
+                return TryGetSerializedPropertySearchText(element, out value);
+            }
+
+            if (columnIndex < 0 || columnIndex >= columns.Count)
+            {
+                return false;
+            }
+
+            TableColumn column = columns[columnIndex];
+            if (column.IsDesignField)
+            {
+                value = GetDesignCellValue(sheetState, rowIndex, column);
+                return true;
+            }
+
+            SerializedProperty cell = GetCellProperty(element, column);
+            return TryGetSerializedPropertySearchText(cell, out value);
+        }
+
+        private static bool TryGetSerializedPropertySearchText(SerializedProperty property, out string value)
+        {
+            value = string.Empty;
+            if (property == null)
+            {
+                return false;
+            }
+
+            switch (property.propertyType)
+            {
+                case SerializedPropertyType.Integer:
+                    value = property.longValue.ToString(CultureInfo.InvariantCulture);
+                    return true;
+                case SerializedPropertyType.Boolean:
+                    value = property.boolValue.ToString();
+                    return true;
+                case SerializedPropertyType.Float:
+                    value = property.floatValue.ToString(CultureInfo.InvariantCulture);
+                    return true;
+                case SerializedPropertyType.String:
+                    value = property.stringValue ?? string.Empty;
+                    return true;
+                case SerializedPropertyType.Color:
+                    value = property.colorValue.ToString();
+                    return true;
+                case SerializedPropertyType.ObjectReference:
+                    value = property.objectReferenceValue == null ? string.Empty : property.objectReferenceValue.name;
+                    return true;
+                case SerializedPropertyType.LayerMask:
+                    value = property.intValue.ToString(CultureInfo.InvariantCulture);
+                    return true;
+                case SerializedPropertyType.Enum:
+                    value = GetEnumSearchText(property);
+                    return true;
+                case SerializedPropertyType.Vector2:
+                    value = property.vector2Value.ToString();
+                    return true;
+                case SerializedPropertyType.Vector3:
+                    value = property.vector3Value.ToString();
+                    return true;
+                case SerializedPropertyType.Vector4:
+                    value = property.vector4Value.ToString();
+                    return true;
+                case SerializedPropertyType.Rect:
+                    value = property.rectValue.ToString();
+                    return true;
+                case SerializedPropertyType.Bounds:
+                    value = property.boundsValue.ToString();
+                    return true;
+                case SerializedPropertyType.Quaternion:
+                    value = property.quaternionValue.ToString();
+                    return true;
+                case SerializedPropertyType.Vector2Int:
+                    value = property.vector2IntValue.ToString();
+                    return true;
+                case SerializedPropertyType.Vector3Int:
+                    value = property.vector3IntValue.ToString();
+                    return true;
+                case SerializedPropertyType.RectInt:
+                    value = property.rectIntValue.ToString();
+                    return true;
+                case SerializedPropertyType.BoundsInt:
+                    value = property.boundsIntValue.ToString();
+                    return true;
+                case SerializedPropertyType.ManagedReference:
+                    value = property.managedReferenceValue == null
+                        ? property.managedReferenceFullTypename ?? string.Empty
+                        : property.managedReferenceValue.ToString();
+                    return true;
+                case SerializedPropertyType.Generic:
+                    value = GetGenericPropertySearchText(property);
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private static string GetEnumSearchText(SerializedProperty property)
+        {
+            string[] displayNames = property.enumDisplayNames;
+            if (displayNames != null
+                && property.enumValueIndex >= 0
+                && property.enumValueIndex < displayNames.Length)
+            {
+                return displayNames[property.enumValueIndex];
+            }
+
+            return property.intValue.ToString(CultureInfo.InvariantCulture);
+        }
+
+        private static string GetGenericPropertySearchText(SerializedProperty property)
+        {
+            List<string> values = new List<string>();
+            SerializedProperty child = property.Copy();
+            SerializedProperty end = property.GetEndProperty();
+            bool enterChildren = true;
+
+            while (child.NextVisible(enterChildren) && !SerializedProperty.EqualContents(child, end))
+            {
+                enterChildren = false;
+                if (child.depth != property.depth + 1)
+                {
+                    continue;
+                }
+
+                if (TryGetSerializedPropertySearchText(child, out string childValue)
+                    && !string.IsNullOrEmpty(childValue))
+                {
+                    values.Add(childValue);
+                }
+            }
+
+            return string.Join(" ", values);
         }
 
         private bool DrawFormulaRows(
@@ -792,6 +1129,7 @@ namespace SpreadAsset.Editor
                 GUILayout.ExpandWidth(true),
                 GUILayout.ExpandHeight(true));
             _tableRowViewportHeight = scrollViewRect.height;
+            ApplyPendingCellScroll(arrayProperty.propertyPath, columns, dataWidth, dataViewportWidth);
             HandleHorizontalScrollWheel(scrollViewRect, dataWidth, dataViewportWidth, useHorizontalScroll);
 
             _propertyScroll.x = 0f;
@@ -1329,6 +1667,32 @@ namespace SpreadAsset.Editor
             Repaint();
         }
 
+        private void RequestCellFocus(
+            string controlName,
+            int rowIndex,
+            List<TableColumn> columns,
+            int columnIndex)
+        {
+            RememberFocusedCell(controlName);
+            _pendingCellFocusControlName = controlName;
+            _pendingCellScrollArrayPropertyPath = _focusedCellArrayPropertyPath;
+            _pendingCellScrollRowIndex = rowIndex;
+            _pendingCellScrollColumnIndex = columnIndex;
+            ScrollCellIntoView(rowIndex, columns, columnIndex);
+            ClearTextFieldFocus();
+            Repaint();
+        }
+
+        private void ScrollCellIntoView(int rowIndex, List<TableColumn> columns, int columnIndex)
+        {
+            ScrollRowIntoView(rowIndex);
+
+            float frozenWidth = CalculateFrozenRowHeaderWidth();
+            float dataWidth = CalculateDataGridWidth(columns);
+            float dataViewportWidth = CalculateDataGridViewportWidth(frozenWidth);
+            ScrollColumnIntoView(columns, columnIndex, dataWidth, dataViewportWidth);
+        }
+
         private void ScrollRowIntoView(int rowIndex)
         {
             if (rowIndex < 0 || _tableRowViewportHeight <= 0f)
@@ -1349,6 +1713,57 @@ namespace SpreadAsset.Editor
             {
                 _propertyScroll.y = Mathf.Max(0f, rowBottom - _tableRowViewportHeight);
             }
+        }
+
+        private void ScrollColumnIntoView(
+            List<TableColumn> columns,
+            int columnIndex,
+            float dataWidth,
+            float dataViewportWidth)
+        {
+            if (columnIndex < 0 || !ShouldUseHorizontalGridScroll(dataWidth, dataViewportWidth))
+            {
+                return;
+            }
+
+            float columnLeft = CalculateColumnX(columns, columnIndex);
+            float columnRight = columnLeft + GetColumnWidth(columns, columnIndex);
+            if (columnLeft < _tableScroll.x)
+            {
+                _tableScroll.x = columnLeft;
+            }
+            else if (columnRight > _tableScroll.x + dataViewportWidth)
+            {
+                _tableScroll.x = columnRight - dataViewportWidth;
+            }
+
+            _tableScroll.x = Mathf.Clamp(_tableScroll.x, 0f, Mathf.Max(0f, dataWidth - dataViewportWidth));
+        }
+
+        private void ApplyPendingCellScroll(
+            string arrayPropertyPath,
+            List<TableColumn> columns,
+            float dataWidth,
+            float dataViewportWidth)
+        {
+            if (_pendingCellScrollRowIndex < 0
+                || _pendingCellScrollColumnIndex < 0
+                || string.IsNullOrEmpty(_pendingCellScrollArrayPropertyPath)
+                || !string.Equals(_pendingCellScrollArrayPropertyPath, arrayPropertyPath, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            ScrollRowIntoView(_pendingCellScrollRowIndex);
+            ScrollColumnIntoView(columns, _pendingCellScrollColumnIndex, dataWidth, dataViewportWidth);
+            ClearPendingCellScroll();
+        }
+
+        private void ClearPendingCellScroll()
+        {
+            _pendingCellScrollArrayPropertyPath = string.Empty;
+            _pendingCellScrollRowIndex = -1;
+            _pendingCellScrollColumnIndex = -1;
         }
 
         private void FocusPendingCellControl(string controlName)
@@ -1871,6 +2286,8 @@ namespace SpreadAsset.Editor
                 {
                     _selectedArrayIndex = i;
                     ClearFocusedCell();
+                    ClearPendingCellScroll();
+                    _searchStatus = string.Empty;
                     GUI.FocusControl(null);
                     Repaint();
                 }
@@ -3316,7 +3733,7 @@ namespace SpreadAsset.Editor
 
         private static float CalculateDataGridWidth(List<TableColumn> columns)
         {
-            if (columns.Count == 0)
+            if (columns == null || columns.Count == 0)
             {
                 return DefaultColumnWidth;
             }
@@ -3328,6 +3745,35 @@ namespace SpreadAsset.Editor
             }
 
             return width;
+        }
+
+        private static float CalculateColumnX(List<TableColumn> columns, int columnIndex)
+        {
+            if (columns == null || columns.Count == 0 || columnIndex <= 0)
+            {
+                return 0f;
+            }
+
+            float x = 0f;
+            int boundedColumnIndex = Mathf.Min(columnIndex, columns.Count);
+            for (int i = 0; i < boundedColumnIndex; i++)
+            {
+                x += columns[i].Width;
+            }
+
+            return x;
+        }
+
+        private static float GetColumnWidth(List<TableColumn> columns, int columnIndex)
+        {
+            if (columns == null || columns.Count == 0)
+            {
+                return DefaultColumnWidth;
+            }
+
+            return columnIndex >= 0 && columnIndex < columns.Count
+                ? columns[columnIndex].Width
+                : DefaultColumnWidth;
         }
 
         private static float CalculateColumnWidth(string label)
@@ -3881,6 +4327,13 @@ namespace SpreadAsset.Editor
 
                 return true;
             }
+        }
+
+        private enum SearchDirection
+        {
+            First,
+            Next,
+            Previous
         }
 
         private readonly struct VisibleRowRange
