@@ -16,14 +16,15 @@ MonoBehaviour:
   - _id: 1
     _firstName: aaa
     _lastName: b
-    weight: 10
-    _roomDatas:
-    - _id: 1
-    - _id: 2
+    _weight: 10
+    _roomDataIds: 0100000002000000
   - _id: 2
     _firstName: ccc
     _lastName: d
-    weight: 20
-    _roomDatas:
-    - _id: 3
-    - _id: 4
+    _weight: 20
+    _roomDataIds: 0100000002000000
+  _roomDatas:
+  - _id: 1
+    _name: Room1
+  - _id: 2
+    _name: Room2

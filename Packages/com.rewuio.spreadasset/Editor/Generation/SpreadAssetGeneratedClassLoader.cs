@@ -21,7 +21,7 @@ namespace SpreadAsset.Editor
             RegexOptions.Compiled);
 
         private static readonly Regex BoolAssignmentPattern = new Regex(
-            @"\b(?<name>IsDesignField|IsKeyField)\s*=\s*(?<value>true|false)",
+            @"\b(?<name>IsDesignField|IsKeyField|OmitArrayField)\s*=\s*(?<value>true|false)",
             RegexOptions.Compiled);
 
         public static bool TryLoadFromSelection(out SpreadAssetGenerationRequest request, out string sourcePath, out string error)
@@ -231,7 +231,8 @@ namespace SpreadAsset.Editor
 
                 string tableBlock = tablesBlock.Substring(braceStart, braceEnd - braceStart + 1);
                 SpreadAssetSchemaTable table = ParseTable(tableBlock);
-                if (!string.IsNullOrEmpty(table.RowTypeName) && !string.IsNullOrEmpty(table.FieldName))
+                if (!string.IsNullOrEmpty(table.RowTypeName)
+                    && (!string.IsNullOrEmpty(table.FieldName) || table.OmitArrayField))
                 {
                     tables.Add(table);
                 }
@@ -257,6 +258,17 @@ namespace SpreadAsset.Editor
                     case "FieldName":
                         table.FieldName = value;
                         break;
+                }
+            }
+
+            foreach (Match assignment in BoolAssignmentPattern.Matches(tableBlock))
+            {
+                if (assignment.Groups["name"].Value == "OmitArrayField")
+                {
+                    table.OmitArrayField = string.Equals(
+                        assignment.Groups["value"].Value,
+                        "true",
+                        StringComparison.OrdinalIgnoreCase);
                 }
             }
 

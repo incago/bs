@@ -2,47 +2,74 @@
     "Version": 2,
     "AssetGuid": "e6f29174201d44d15af4cc97c3b584fe",
     "AssetPath": "Assets/Resources/game_data_stage.asset",
-    "AssetTypeName": "StageDataAsset, Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
-    "SerializedAssetJson": "{\n    \"MonoBehaviour\": {\n        \"m_Enabled\": true,\n        \"m_EditorHideFlags\": 0,\n        \"m_Name\": \"game_data_stage\",\n        \"m_EditorClassIdentifier\": \"Assembly-CSharp::StageDataAsset\",\n        \"_stageDatas\": [\n            {\n                \"_id\": 1,\n                \"_firstName\": \"aaa\",\n                \"_lastName\": \"b\",\n                \"weight\": 10.0,\n                \"_roomDatas\": [\n                    {\n                        \"_id\": 1\n                    },\n                    {\n                        \"_id\": 2\n                    }\n                ]\n            },\n            {\n                \"_id\": 2,\n                \"_firstName\": \"ccc\",\n                \"_lastName\": \"d\",\n                \"weight\": 20.0,\n                \"_roomDatas\": [\n                    {\n                        \"_id\": 3\n                    },\n                    {\n                        \"_id\": 4\n                    }\n                ]\n            }\n        ]\n    }\n}",
+    "AssetTypeName": "SpreadAsset.Generated.StageDataAsset, Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "SerializedAssetJson": "{\n    \"MonoBehaviour\": {\n        \"m_Enabled\": true,\n        \"m_EditorHideFlags\": 0,\n        \"m_Name\": \"game_data_stage\",\n        \"m_EditorClassIdentifier\": \"Assembly-CSharp::StageDataAsset\",\n        \"_stageDatas\": [\n            {\n                \"_id\": 1,\n                \"_firstName\": \"aaa\",\n                \"_lastName\": \"b\",\n                \"_weight\": 10.0,\n                \"_roomDataIds\": [\n                    1,\n                    2\n                ]\n            },\n            {\n                \"_id\": 2,\n                \"_firstName\": \"ccc\",\n                \"_lastName\": \"d\",\n                \"_weight\": 20.0,\n                \"_roomDataIds\": [\n                    1,\n                    2\n                ]\n            }\n        ],\n        \"_roomDatas\": [\n            {\n                \"_id\": 1,\n                \"_name\": \"Room1\"\n            },\n            {\n                \"_id\": 2,\n                \"_name\": \"Room2\"\n            }\n        ]\n    }\n}",
     "Schema": {
         "AssetClassName": "StageDataAsset",
-        "NamespaceName": "",
+        "NamespaceName": "SpreadAsset.Generated",
         "MenuPath": "SpreadAsset/game_data_stage",
         "Fields": [],
         "Tables": [
             {
                 "RowTypeName": "StageData",
                 "FieldName": "StageDatas",
+                "OmitArrayField": false,
                 "Fields": [
                     {
                         "Id": "field_99738f1cc27dc9b6",
                         "TypeName": "int",
                         "Name": "Id",
-                        "IsDesignField": false
+                        "IsDesignField": false,
+                        "IsKeyField": false
                     },
                     {
                         "Id": "field_bd750a0bd349b6ac",
                         "TypeName": "string",
                         "Name": "FirstName",
-                        "IsDesignField": false
+                        "IsDesignField": false,
+                        "IsKeyField": false
                     },
                     {
                         "Id": "field_eaa1fa9d2d6d3a6a",
                         "TypeName": "string",
                         "Name": "LastName",
-                        "IsDesignField": false
+                        "IsDesignField": false,
+                        "IsKeyField": false
                     },
                     {
                         "Id": "field_424352ca1d5d24a4",
                         "TypeName": "float",
                         "Name": "Weight",
-                        "IsDesignField": false
+                        "IsDesignField": false,
+                        "IsKeyField": false
                     },
                     {
-                        "Id": "field_443ae0535b7bf081",
-                        "TypeName": "RoomData[]",
-                        "Name": "RoomDatas",
-                        "IsDesignField": false
+                        "Id": "field_0938a8729add4c078c178137c15f89c2",
+                        "TypeName": "int[]",
+                        "Name": "RoomDataIds",
+                        "IsDesignField": false,
+                        "IsKeyField": false
+                    }
+                ]
+            },
+            {
+                "RowTypeName": "RoomData",
+                "FieldName": "RoomDatas",
+                "OmitArrayField": false,
+                "Fields": [
+                    {
+                        "Id": "field_d97946bdcfb24f31911c5e9fdc5cfee8",
+                        "TypeName": "int",
+                        "Name": "Id",
+                        "IsDesignField": false,
+                        "IsKeyField": true
+                    },
+                    {
+                        "Id": "field_252739a3695e40208f43da182b205485",
+                        "TypeName": "string",
+                        "Name": "Name",
+                        "IsDesignField": false,
+                        "IsKeyField": false
                     }
                 ]
             }
@@ -52,6 +79,19 @@
         {
             "ArrayFieldName": "StageDatas",
             "Formulas": [],
+            "Columns": [
+                {
+                    "ColumnId": "field_0938a8729add4c078c178137c15f89c2",
+                    "ColumnName": "RoomDataIds",
+                    "Width": 216.51998901367188
+                }
+            ],
+            "Cells": []
+        },
+        {
+            "ArrayFieldName": "RoomDatas",
+            "Formulas": [],
+            "Columns": [],
             "Cells": []
         }
     ]

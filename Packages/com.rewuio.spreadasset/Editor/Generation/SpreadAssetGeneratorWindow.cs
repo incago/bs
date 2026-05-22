@@ -18,6 +18,12 @@ namespace SpreadAsset.Editor
             "bool",
             "long",
             "double",
+            "string[]",
+            "int[]",
+            "float[]",
+            "bool[]",
+            "long[]",
+            "double[]",
             "Vector2",
             "Vector3",
             "Vector4",
@@ -171,11 +177,19 @@ namespace SpreadAsset.Editor
                     }
                 }
 
-                table.FieldName = EditorGUILayout.TextField("Array Field", table.FieldName);
+                table.OmitArrayField = EditorGUILayout.ToggleLeft(
+                    "Data class only (do not generate asset array field)",
+                    table.OmitArrayField);
+                using (new EditorGUI.DisabledScope(table.OmitArrayField))
+                {
+                    table.FieldName = EditorGUILayout.TextField("Array Field", table.FieldName);
+                }
+
                 EditorGUILayout.LabelField("Data Fields", EditorStyles.miniBoldLabel);
+                string[] dataFieldTypeNames = CreateDataFieldTypeNames(table);
                 for (int i = 0; i < table.Fields.Count; i++)
                 {
-                    DrawFieldDraft(table.Fields, i, allowDesignField: true);
+                    DrawFieldDraft(table.Fields, i, allowDesignField: true, dataFieldTypeNames);
                 }
 
                 if (GUILayout.Button("Add Data Field"))
@@ -185,7 +199,11 @@ namespace SpreadAsset.Editor
             }
         }
 
-        private static void DrawFieldDraft(List<FieldDraft> fields, int index, bool allowDesignField)
+        private static void DrawFieldDraft(
+            List<FieldDraft> fields,
+            int index,
+            bool allowDesignField,
+            string[] dataFieldTypeNames = null)
         {
             FieldDraft field = fields[index];
             using (new EditorGUILayout.HorizontalScope())
@@ -196,7 +214,7 @@ namespace SpreadAsset.Editor
                 }
 
                 field.TypeName = allowDesignField
-                    ? DrawDataFieldTypePopup(field.TypeName)
+                    ? DrawDataFieldTypePopup(field.TypeName, dataFieldTypeNames)
                     : EditorGUILayout.TextField(field.TypeName, GUILayout.MinWidth(90));
                 field.Name = EditorGUILayout.TextField(field.Name, GUILayout.MinWidth(120));
                 if (allowDesignField)
@@ -310,15 +328,87 @@ namespace SpreadAsset.Editor
             }
         }
 
-        private static string DrawDataFieldTypePopup(string currentTypeName)
+        private string[] CreateDataFieldTypeNames(TableDraft ownerTable)
         {
+            List<string> typeNames = new List<string>(DataFieldTypeNames);
+            HashSet<string> usedTypeNames = new HashSet<string>(DataFieldTypeNames, StringComparer.Ordinal);
+            string ownerRowTypeName = NormalizeDataClassTypeName(ownerTable?.RowTypeName);
+            foreach (TableDraft table in _tables)
+            {
+                string rowTypeName = NormalizeDataClassTypeName(table?.RowTypeName);
+                if (string.IsNullOrEmpty(rowTypeName)
+                    || string.Equals(rowTypeName, ownerRowTypeName, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                AddDataFieldTypeName(typeNames, usedTypeNames, rowTypeName);
+                AddDataFieldTypeName(typeNames, usedTypeNames, rowTypeName + "[]");
+            }
+
+            return typeNames.ToArray();
+        }
+
+        private static void AddDataFieldTypeName(
+            List<string> typeNames,
+            HashSet<string> usedTypeNames,
+            string typeName)
+        {
+            if (usedTypeNames.Add(typeName))
+            {
+                typeNames.Add(typeName);
+            }
+        }
+
+        private static string DrawDataFieldTypePopup(string currentTypeName, string[] dataFieldTypeNames)
+        {
+            if (!IsSupportedDataFieldType(currentTypeName, dataFieldTypeNames))
+            {
+                EditorGUILayout.LabelField(
+                    string.IsNullOrWhiteSpace(currentTypeName)
+                        ? "Unsupported"
+                        : currentTypeName.Trim() + " (unsupported)",
+                    EditorStyles.miniLabel,
+                    GUILayout.MinWidth(120));
+                if (GUILayout.Button("Reset", GUILayout.Width(52)))
+                {
+                    return "int";
+                }
+
+                return currentTypeName;
+            }
+
             SpreadAssetEnumTypeUtility.TypePopupOptions options =
-                SpreadAssetEnumTypeUtility.CreatePopupOptions(DataFieldTypeNames, currentTypeName);
+                SpreadAssetEnumTypeUtility.CreatePopupOptions(dataFieldTypeNames ?? DataFieldTypeNames, currentTypeName);
             int selectedIndex = EditorGUILayout.Popup(
                 options.SelectedIndex,
                 options.DisplayNames,
                 GUILayout.MinWidth(90));
             return options.TypeNames[Mathf.Clamp(selectedIndex, 0, options.TypeNames.Length - 1)];
+        }
+
+        private static bool IsSupportedDataFieldType(string typeName, string[] dataFieldTypeNames)
+        {
+            if (string.IsNullOrWhiteSpace(typeName))
+            {
+                return true;
+            }
+
+            string normalizedTypeName = typeName.Trim();
+            foreach (string dataFieldTypeName in dataFieldTypeNames ?? DataFieldTypeNames)
+            {
+                if (string.Equals(dataFieldTypeName, normalizedTypeName, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return SpreadAssetEnumTypeUtility.TryGetAnnotatedEnumType(normalizedTypeName, out _);
+        }
+
+        private static string NormalizeDataClassTypeName(string typeName)
+        {
+            return SpreadAssetNameUtility.ToPascalCase(typeName?.Trim() ?? string.Empty);
         }
 
         private void Generate()
@@ -402,7 +492,7 @@ namespace SpreadAsset.Editor
 
             foreach (SpreadAssetSchemaTable previousTable in previousTables)
             {
-                if (previousTable == null || string.IsNullOrEmpty(previousTable.FieldName))
+                if (previousTable == null || previousTable.OmitArrayField || string.IsNullOrEmpty(previousTable.FieldName))
                 {
                     continue;
                 }
@@ -411,6 +501,12 @@ namespace SpreadAsset.Editor
                 if (nextTable == null)
                 {
                     changedTables.Add($"- {previousTable.FieldName}: table was removed or renamed.");
+                    continue;
+                }
+
+                if (!previousTable.OmitArrayField && nextTable.OmitArrayField)
+                {
+                    changedTables.Add($"- {previousTable.FieldName}: asset array field will no longer be generated.");
                     continue;
                 }
 
@@ -447,7 +543,16 @@ namespace SpreadAsset.Editor
                     continue;
                 }
 
-                if (IsSameSchemaName(candidate.FieldName, table.FieldName))
+                if (!string.IsNullOrEmpty(candidate.FieldName)
+                    && !string.IsNullOrEmpty(table.FieldName)
+                    && IsSameSchemaName(candidate.FieldName, table.FieldName))
+                {
+                    return candidate;
+                }
+
+                if (candidate.OmitArrayField
+                    && table.OmitArrayField
+                    && IsSameSchemaName(candidate.RowTypeName, table.RowTypeName))
                 {
                     return candidate;
                 }
@@ -591,7 +696,7 @@ namespace SpreadAsset.Editor
             _tables.Clear();
             foreach (SpreadAssetSchemaTable table in request.Schema.Tables)
             {
-                TableDraft tableDraft = new TableDraft(table.RowTypeName, table.FieldName);
+                TableDraft tableDraft = new TableDraft(table.RowTypeName, table.FieldName, table.OmitArrayField);
                 foreach (SpreadAssetSchemaField field in table.Fields)
                 {
                     tableDraft.Fields.Add(new FieldDraft(
@@ -667,6 +772,7 @@ namespace SpreadAsset.Editor
                 {
                     RowTypeName = table.RowTypeName.Trim(),
                     FieldName = SpreadAssetNameUtility.ToPascalCase(table.FieldName),
+                    OmitArrayField = table.OmitArrayField,
                     Fields = ToSchemaFields(table.Fields)
                 });
             }
@@ -707,12 +813,14 @@ namespace SpreadAsset.Editor
         {
             public string RowTypeName;
             public string FieldName;
+            public bool OmitArrayField;
             public readonly List<FieldDraft> Fields = new List<FieldDraft>();
 
-            public TableDraft(string rowTypeName, string fieldName)
+            public TableDraft(string rowTypeName, string fieldName, bool omitArrayField = false)
             {
                 RowTypeName = rowTypeName;
                 FieldName = fieldName;
+                OmitArrayField = omitArrayField;
             }
 
             public bool IsEmpty => string.IsNullOrWhiteSpace(RowTypeName) && string.IsNullOrWhiteSpace(FieldName);

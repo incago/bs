@@ -367,6 +367,11 @@ namespace SpreadAsset.Editor
                 builder.Append(childIndentation).AppendLine("{");
                 builder.Append(childIndentation).Append("    RowTypeName = \"").Append(EscapeString(table.RowTypeName)).AppendLine("\",");
                 builder.Append(childIndentation).Append("    FieldName = \"").Append(EscapeString(table.FieldName)).AppendLine("\",");
+                if (table.OmitArrayField)
+                {
+                    builder.Append(childIndentation).AppendLine("    OmitArrayField = true,");
+                }
+
                 builder.Append(childIndentation).Append("    Fields = ").Append(GenerateSchemaFields(table.Fields, indent + 8)).AppendLine();
                 builder.Append(childIndentation).AppendLine("},");
             }

@@ -39,6 +39,7 @@ namespace SpreadAsset.Editor
     {
         public string RowTypeName = string.Empty;
         public string FieldName = string.Empty;
+        public bool OmitArrayField;
         public SpreadAssetSchemaField[] Fields = Array.Empty<SpreadAssetSchemaField>();
     }
 

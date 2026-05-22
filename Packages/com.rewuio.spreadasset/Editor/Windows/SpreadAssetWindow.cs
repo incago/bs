@@ -33,6 +33,14 @@ namespace SpreadAsset.Editor
         private const float HorizontalWheelScrollSpeed = 24f;
         private const float TableLayoutPadding = 6f;
         private const float CellControlHorizontalPadding = 4f;
+        private const float CellControlVerticalPadding = 3f;
+        private const float CellMinimumLabelWidth = 24f;
+        private const float CellMaximumLabelWidth = 80f;
+        private const float CellMinimumPropertyFieldWidth = 32f;
+        private const float CellLabelGap = 4f;
+        private const float CellTreeIndentWidth = 8f;
+        private const float CellMaximumTreeIndent = 18f;
+        private const float CellHideLabelWidth = 84f;
         private const string CellControlPrefix = "SpreadAsset Editor.Cell.";
         private const string SearchControlName = "SpreadAsset Editor.Search";
 
@@ -1222,7 +1230,8 @@ namespace SpreadAsset.Editor
             float frozenWidth,
             bool useHorizontalScroll)
         {
-            float rowContentHeight = CalculateGridRowContentHeight(arrayProperty.arraySize);
+            GridRowLayout rowLayout = CalculateGridRowLayout(arrayProperty, columns);
+            float rowContentHeight = rowLayout.ContentHeight;
             float dataHeight = rowContentHeight;
 
             Rect scrollViewRect = GUILayoutUtility.GetRect(
@@ -1233,7 +1242,7 @@ namespace SpreadAsset.Editor
                 GUILayout.ExpandWidth(true),
                 GUILayout.ExpandHeight(true));
             _tableRowViewportHeight = scrollViewRect.height;
-            ApplyPendingCellScroll(arrayProperty.propertyPath, columns, dataWidth, dataViewportWidth);
+            ApplyPendingCellScroll(arrayProperty.propertyPath, columns, dataWidth, dataViewportWidth, rowLayout);
             HandleHorizontalScrollWheel(scrollViewRect, dataWidth, dataViewportWidth, useHorizontalScroll);
 
             _propertyScroll.x = 0f;
@@ -1254,14 +1263,14 @@ namespace SpreadAsset.Editor
             }
 
             VisibleRowRange visibleRows = CalculateVisibleRowRange(
-                arrayProperty.arraySize,
+                rowLayout,
                 _propertyScroll.y,
                 scrollViewRect.height);
 
             GUILayout.BeginArea(contentRect);
             using (new EditorGUILayout.HorizontalScope(GUILayout.Height(dataHeight)))
             {
-                DrawFrozenRowHeaders(arrayProperty, sheetState, frozenWidth, rowContentHeight, visibleRows);
+                DrawFrozenRowHeaders(arrayProperty, sheetState, frozenWidth, rowContentHeight, rowLayout, visibleRows);
                 DrawScrollableRowCells(
                     arrayProperty,
                     columns,
@@ -1271,6 +1280,7 @@ namespace SpreadAsset.Editor
                     dataViewportWidth,
                     dataHeight,
                     useHorizontalScroll,
+                    rowLayout,
                     visibleRows);
             }
             GUILayout.EndArea();
@@ -1283,6 +1293,7 @@ namespace SpreadAsset.Editor
             SpreadAssetSheetState sheetState,
             float frozenWidth,
             float rowContentHeight,
+            GridRowLayout rowLayout,
             VisibleRowRange visibleRows)
         {
             Rect viewportRect = GUILayoutUtility.GetRect(
@@ -1298,19 +1309,24 @@ namespace SpreadAsset.Editor
             GUI.BeginGroup(viewportRect);
             for (int row = visibleRows.StartIndex; row < visibleRows.EndIndex; row++)
             {
-                float y = CalculateGridRowY(row);
-                Rect rowHeaderRect = new Rect(0f, y, frozenWidth, TableRowHeight);
+                float y = rowLayout.GetY(row);
+                float rowHeight = rowLayout.GetHeight(row);
+                Rect rowHeaderRect = new Rect(0f, y, frozenWidth, rowHeight);
                 DrawFocusedRowHeaderBackground(rowHeaderRect, hasFocusedCell && row == focusedRowIndex);
-                GUI.Label(new Rect(0f, y, RowNumberWidth, TableRowHeight), (row + 1).ToString());
+                GUI.Label(
+                    GetCenteredRowControlRect(new Rect(0f, y, RowNumberWidth, rowHeight)),
+                    (row + 1).ToString());
 
-                if (GUI.Button(new Rect(RowNumberWidth, y, RowButtonWidth, TableRowHeight), "+"))
+                if (GUI.Button(GetCenteredRowControlRect(new Rect(RowNumberWidth, y, RowButtonWidth, rowHeight)), "+"))
                 {
                     InsertArrayRow(arrayProperty, row);
                     ShiftSheetCellsForInsert(sheetState, row);
                     CompleteRowStructureChange(arrayProperty, columnsChanged: false, sheetState);
                 }
 
-                if (GUI.Button(new Rect(RowNumberWidth + RowButtonWidth, y, RowButtonWidth, TableRowHeight), "-"))
+                if (GUI.Button(
+                        GetCenteredRowControlRect(new Rect(RowNumberWidth + RowButtonWidth, y, RowButtonWidth, rowHeight)),
+                        "-"))
                 {
                     DeleteArrayRow(arrayProperty, row);
                     ShiftSheetCellsForDelete(sheetState, row);
@@ -1329,6 +1345,7 @@ namespace SpreadAsset.Editor
             float dataViewportWidth,
             float dataHeight,
             bool useHorizontalScroll,
+            GridRowLayout rowLayout,
             VisibleRowRange visibleRows)
         {
             if (useHorizontalScroll)
@@ -1342,7 +1359,14 @@ namespace SpreadAsset.Editor
                     viewportRect,
                     dataWidth,
                     dataHeight,
-                    () => DrawDataRows(arrayProperty, columns, formulaTargetKeys, sheetState, dataWidth, visibleRows));
+                    () => DrawDataRows(
+                        arrayProperty,
+                        columns,
+                        formulaTargetKeys,
+                        sheetState,
+                        dataWidth,
+                        rowLayout,
+                        visibleRows));
                 return;
             }
 
@@ -1353,7 +1377,14 @@ namespace SpreadAsset.Editor
                 GUILayout.Width(dataWidth),
                 GUILayout.Height(dataHeight));
             GUI.BeginGroup(tableRect);
-            DrawDataRows(arrayProperty, columns, formulaTargetKeys, sheetState, dataWidth, visibleRows);
+            DrawDataRows(
+                arrayProperty,
+                columns,
+                formulaTargetKeys,
+                sheetState,
+                dataWidth,
+                rowLayout,
+                visibleRows);
             GUI.EndGroup();
         }
 
@@ -1363,13 +1394,14 @@ namespace SpreadAsset.Editor
             HashSet<string> formulaTargetKeys,
             SpreadAssetSheetState sheetState,
             float dataWidth,
+            GridRowLayout rowLayout,
             VisibleRowRange visibleRows)
         {
             for (int row = visibleRows.StartIndex; row < visibleRows.EndIndex; row++)
             {
                 SerializedProperty element = arrayProperty.GetArrayElementAtIndex(row);
                 DrawRowCells(
-                    new Rect(0f, CalculateGridRowY(row), dataWidth, TableRowHeight),
+                    new Rect(0f, rowLayout.GetY(row), dataWidth, rowLayout.GetHeight(row)),
                     arrayProperty,
                     element,
                     columns,
@@ -1461,7 +1493,7 @@ namespace SpreadAsset.Editor
 
             if (columns.Count == 0)
             {
-                Rect fallbackCellRect = new Rect(rowRect.x, rowRect.y, DefaultColumnWidth, TableRowHeight);
+                Rect fallbackCellRect = new Rect(rowRect.x, rowRect.y, DefaultColumnWidth, rowRect.height);
                 string controlName = GetCellControlName(arrayProperty.propertyPath, rowIndex, 0);
                 GUI.SetNextControlName(controlName);
                 if (TryCaptureFocusedCellFromMouseDown(arrayProperty.propertyPath, rowIndex, 0, fallbackCellRect))
@@ -1475,11 +1507,7 @@ namespace SpreadAsset.Editor
                     fallbackCellRect,
                     hasFocusedCell && rowIndex == focusedRowIndex,
                     hasFocusedCell && focusedColumnIndex == 0);
-                EditorGUI.PropertyField(
-                    GetCenteredCellControlRect(fallbackCellRect),
-                    element,
-                    GUIContent.none,
-                    true);
+                DrawTablePropertyField(GetPropertyCellControlRect(fallbackCellRect, element), element);
                 DrawCellTooltip(fallbackCellRect, rowIndex, 0);
                 FocusPendingCellControl(controlName);
                 return;
@@ -1497,8 +1525,7 @@ namespace SpreadAsset.Editor
                     x,
                     rowRect.y,
                     column.Width,
-                    TableRowHeight);
-                Rect cellRect = GetCenteredCellControlRect(cellAreaRect);
+                    rowRect.height);
                 if (TryCaptureFocusedCellFromMouseDown(arrayProperty.propertyPath, rowIndex, columnIndex, cellAreaRect))
                 {
                     hasFocusedCell = true;
@@ -1512,6 +1539,7 @@ namespace SpreadAsset.Editor
 
                 if (column.IsDesignField)
                 {
+                    Rect cellRect = GetCenteredCellControlRect(cellAreaRect);
                     using (new EditorGUI.DisabledScope(formulaControlled))
                     {
                         DrawDesignCell(cellRect, sheetState, rowIndex, column);
@@ -1526,7 +1554,7 @@ namespace SpreadAsset.Editor
                 SerializedProperty cell = GetCellProperty(element, column);
                 if (cell == null)
                 {
-                    GUI.Label(cellRect, "-");
+                    GUI.Label(GetCenteredCellControlRect(cellAreaRect), "-");
                     DrawCellTooltip(cellAreaRect, rowIndex, columnIndex);
                     x += column.Width;
                     continue;
@@ -1534,7 +1562,8 @@ namespace SpreadAsset.Editor
 
                 using (new EditorGUI.DisabledScope(formulaControlled))
                 {
-                    EditorGUI.PropertyField(cellRect, cell, GUIContent.none, true);
+                    Rect cellRect = GetPropertyCellControlRect(cellAreaRect, cell);
+                    DrawTablePropertyField(cellRect, cell);
                 }
 
                 DrawCellTooltip(cellAreaRect, rowIndex, columnIndex);
@@ -1548,9 +1577,195 @@ namespace SpreadAsset.Editor
             float horizontalPadding = Mathf.Min(CellControlHorizontalPadding, cellAreaRect.width * 0.5f);
             return new Rect(
                 cellAreaRect.x + horizontalPadding,
-                cellAreaRect.y + Mathf.Max(0f, (TableRowHeight - EditorGUIUtility.singleLineHeight) * 0.5f),
+                cellAreaRect.y + Mathf.Max(0f, (cellAreaRect.height - EditorGUIUtility.singleLineHeight) * 0.5f),
                 Mathf.Max(1f, cellAreaRect.width - horizontalPadding * 2f),
                 EditorGUIUtility.singleLineHeight);
+        }
+
+        private static Rect GetPropertyCellControlRect(Rect cellAreaRect, SerializedProperty property)
+        {
+            float propertyHeight = CalculatePropertyControlHeight(property);
+            if (propertyHeight <= EditorGUIUtility.singleLineHeight + 0.5f)
+            {
+                return GetCenteredCellControlRect(cellAreaRect);
+            }
+
+            float horizontalPadding = Mathf.Min(CellControlHorizontalPadding, cellAreaRect.width * 0.5f);
+            float verticalPadding = Mathf.Min(CellControlVerticalPadding, cellAreaRect.height * 0.5f);
+            return new Rect(
+                cellAreaRect.x + horizontalPadding,
+                cellAreaRect.y + verticalPadding,
+                Mathf.Max(1f, cellAreaRect.width - horizontalPadding * 2f),
+                Mathf.Max(
+                    EditorGUIUtility.singleLineHeight,
+                    Mathf.Min(propertyHeight, cellAreaRect.height - verticalPadding * 2f)));
+        }
+
+        private static void DrawTablePropertyField(Rect cellRect, SerializedProperty property)
+        {
+            if (property == null)
+            {
+                return;
+            }
+
+            float previousLabelWidth = EditorGUIUtility.labelWidth;
+            float previousFieldWidth = EditorGUIUtility.fieldWidth;
+            bool previousWideMode = EditorGUIUtility.wideMode;
+            int previousIndentLevel = EditorGUI.indentLevel;
+
+            try
+            {
+                EditorGUI.indentLevel = 0;
+                EditorGUIUtility.wideMode = true;
+                EditorGUIUtility.labelWidth = CalculateTableCellLabelWidth(cellRect.width);
+                EditorGUIUtility.fieldWidth = Mathf.Max(
+                    CellMinimumPropertyFieldWidth,
+                    cellRect.width - EditorGUIUtility.labelWidth);
+                if (ShouldDrawTablePropertyTree(property))
+                {
+                    DrawTablePropertyTree(cellRect, property);
+                }
+                else
+                {
+                    DrawTablePropertyLine(cellRect, property, GUIContent.none);
+                }
+            }
+            finally
+            {
+                EditorGUI.indentLevel = previousIndentLevel;
+                EditorGUIUtility.wideMode = previousWideMode;
+                EditorGUIUtility.fieldWidth = previousFieldWidth;
+                EditorGUIUtility.labelWidth = previousLabelWidth;
+            }
+        }
+
+        private static void DrawTablePropertyTree(Rect cellRect, SerializedProperty property)
+        {
+            float y = cellRect.y;
+            Rect rootRect = new Rect(cellRect.x, y, cellRect.width, GetTablePropertyLineHeight(property));
+            DrawTablePropertyLine(rootRect, property, GUIContent.none);
+            y = rootRect.yMax + EditorGUIUtility.standardVerticalSpacing;
+            if (!property.isExpanded)
+            {
+                return;
+            }
+
+            SerializedProperty child = property.Copy();
+            SerializedProperty end = property.GetEndProperty();
+            bool enterChildren = true;
+            while (child.NextVisible(enterChildren) && !SerializedProperty.EqualContents(child, end))
+            {
+                float lineHeight = GetTablePropertyLineHeight(child);
+                if (y + lineHeight > cellRect.yMax + 0.5f)
+                {
+                    break;
+                }
+
+                int relativeDepth = Mathf.Max(0, child.depth - property.depth - 1);
+                float indent = CalculateTableCellTreeIndent(cellRect.width, relativeDepth);
+                Rect lineRect = new Rect(
+                    cellRect.x + indent,
+                    y,
+                    Mathf.Max(1f, cellRect.width - indent),
+                    lineHeight);
+                DrawTablePropertyLine(lineRect, child, new GUIContent(child.displayName));
+                y = lineRect.yMax + EditorGUIUtility.standardVerticalSpacing;
+                enterChildren = ShouldDrawTablePropertyTree(child);
+            }
+        }
+
+        private static void DrawTablePropertyLine(Rect lineRect, SerializedProperty property, GUIContent label)
+        {
+            if (IsTableExpandableProperty(property))
+            {
+                property.isExpanded = EditorGUI.Foldout(lineRect, property.isExpanded, label, true);
+                return;
+            }
+
+            if (label == GUIContent.none || string.IsNullOrEmpty(label.text))
+            {
+                EditorGUI.PropertyField(lineRect, property, GUIContent.none, false);
+                return;
+            }
+
+            float labelWidth = CalculateTableCellLabelWidth(lineRect.width);
+            if (labelWidth <= 0f)
+            {
+                EditorGUI.PropertyField(lineRect, property, GUIContent.none, false);
+                return;
+            }
+
+            Rect labelRect = new Rect(lineRect.x, lineRect.y, labelWidth, lineRect.height);
+            Rect fieldRect = new Rect(
+                labelRect.xMax + CellLabelGap,
+                lineRect.y,
+                Mathf.Max(1f, lineRect.width - labelWidth - CellLabelGap),
+                lineRect.height);
+            EditorGUI.LabelField(labelRect, label, EditorStyles.miniLabel);
+            EditorGUI.PropertyField(fieldRect, property, GUIContent.none, false);
+        }
+
+        private static bool ShouldDrawTablePropertyTree(SerializedProperty property)
+        {
+            return IsTableExpandableProperty(property) && property.isExpanded;
+        }
+
+        private static bool IsTableExpandableProperty(SerializedProperty property)
+        {
+            return property != null
+                && property.hasVisibleChildren
+                && (property.propertyType == SerializedPropertyType.Generic
+                    || property.propertyType == SerializedPropertyType.ManagedReference);
+        }
+
+        private static float GetTablePropertyLineHeight(SerializedProperty property)
+        {
+            if (IsTableExpandableProperty(property))
+            {
+                return EditorGUIUtility.singleLineHeight;
+            }
+
+            return Mathf.Max(
+                EditorGUIUtility.singleLineHeight,
+                EditorGUI.GetPropertyHeight(property, GUIContent.none, includeChildren: false));
+        }
+
+        private static float CalculateTableCellLabelWidth(float cellWidth)
+        {
+            float availableWidth = Mathf.Max(1f, cellWidth);
+            if (availableWidth < CellHideLabelWidth)
+            {
+                return 0f;
+            }
+
+            float preferredLabelWidth = Mathf.Clamp(
+                availableWidth * 0.35f,
+                CellMinimumLabelWidth,
+                CellMaximumLabelWidth);
+            float maxLabelWidthWithField = Mathf.Max(
+                CellMinimumLabelWidth,
+                availableWidth - CellMinimumPropertyFieldWidth - CellLabelGap);
+            return Mathf.Min(preferredLabelWidth, maxLabelWidthWithField);
+        }
+
+        private static float CalculateTableCellTreeIndent(float cellWidth, int relativeDepth)
+        {
+            if (relativeDepth <= 0 || cellWidth < CellHideLabelWidth)
+            {
+                return 0f;
+            }
+
+            return Mathf.Min(relativeDepth * CellTreeIndentWidth, CellMaximumTreeIndent);
+        }
+
+        private static Rect GetCenteredRowControlRect(Rect controlAreaRect)
+        {
+            float controlHeight = Mathf.Min(TableRowHeight, controlAreaRect.height);
+            return new Rect(
+                controlAreaRect.x,
+                controlAreaRect.y + Mathf.Max(0f, (controlAreaRect.height - controlHeight) * 0.5f),
+                controlAreaRect.width,
+                controlHeight);
         }
 
         private static void DrawCellTooltip(Rect cellRect, int rowIndex, int columnIndex)
@@ -1766,6 +1981,17 @@ namespace SpreadAsset.Editor
         {
             RememberFocusedCell(controlName);
             _pendingCellFocusControlName = controlName;
+            if (TryParseCellControlName(
+                    controlName,
+                    out string arrayPropertyPath,
+                    out _,
+                    out int columnIndex))
+            {
+                _pendingCellScrollArrayPropertyPath = arrayPropertyPath;
+                _pendingCellScrollRowIndex = rowIndex;
+                _pendingCellScrollColumnIndex = columnIndex;
+            }
+
             ScrollRowIntoView(rowIndex);
             ClearTextFieldFocus();
             Repaint();
@@ -1819,6 +2045,34 @@ namespace SpreadAsset.Editor
             }
         }
 
+        private void ScrollRowIntoView(int rowIndex, GridRowLayout rowLayout)
+        {
+            if (rowIndex < 0 || rowIndex >= rowLayout.Count || _tableRowViewportHeight <= 0f)
+            {
+                return;
+            }
+
+            float rowTop = rowLayout.GetY(rowIndex);
+            float rowBottom = rowLayout.GetBottom(rowIndex);
+            if (rowBottom - rowTop > _tableRowViewportHeight)
+            {
+                _propertyScroll.y = rowTop;
+                return;
+            }
+
+            if (rowTop < _propertyScroll.y)
+            {
+                _propertyScroll.y = rowTop;
+                return;
+            }
+
+            float viewportBottom = _propertyScroll.y + _tableRowViewportHeight;
+            if (rowBottom > viewportBottom)
+            {
+                _propertyScroll.y = Mathf.Max(0f, rowBottom - _tableRowViewportHeight);
+            }
+        }
+
         private void ScrollColumnIntoView(
             List<TableColumn> columns,
             int columnIndex,
@@ -1848,7 +2102,8 @@ namespace SpreadAsset.Editor
             string arrayPropertyPath,
             List<TableColumn> columns,
             float dataWidth,
-            float dataViewportWidth)
+            float dataViewportWidth,
+            GridRowLayout rowLayout)
         {
             if (_pendingCellScrollRowIndex < 0
                 || _pendingCellScrollColumnIndex < 0
@@ -1858,7 +2113,7 @@ namespace SpreadAsset.Editor
                 return;
             }
 
-            ScrollRowIntoView(_pendingCellScrollRowIndex);
+            ScrollRowIntoView(_pendingCellScrollRowIndex, rowLayout);
             ScrollColumnIntoView(columns, _pendingCellScrollColumnIndex, dataWidth, dataViewportWidth);
             ClearPendingCellScroll();
         }
@@ -5056,7 +5311,7 @@ namespace SpreadAsset.Editor
             string sheetKey = GetSheetKey(arrayProperty);
             foreach (SpreadAssetSchemaTable table in _document.Schema.Tables)
             {
-                if (table == null || string.IsNullOrEmpty(table.FieldName))
+                if (table == null || table.OmitArrayField || string.IsNullOrEmpty(table.FieldName))
                 {
                     continue;
                 }
@@ -5360,28 +5615,128 @@ namespace SpreadAsset.Editor
             return TableHeaderHeight;
         }
 
-        private static VisibleRowRange CalculateVisibleRowRange(int rowCount, float scrollY, float viewportHeight)
+        private static GridRowLayout CalculateGridRowLayout(
+            SerializedProperty arrayProperty,
+            List<TableColumn> columns)
         {
+            int rowCount = arrayProperty?.arraySize ?? 0;
+            if (rowCount <= 0)
+            {
+                return new GridRowLayout(Array.Empty<float>(), Array.Empty<float>(), TableRowHeight + TableLayoutPadding);
+            }
+
+            float[] yOffsets = new float[rowCount];
+            float[] heights = new float[rowCount];
+            float y = 0f;
+            float rowSpacing = EditorGUIUtility.standardVerticalSpacing;
+            for (int row = 0; row < rowCount; row++)
+            {
+                SerializedProperty element = arrayProperty.GetArrayElementAtIndex(row);
+                float rowHeight = CalculateGridRowHeight(element, columns);
+                yOffsets[row] = y;
+                heights[row] = rowHeight;
+                y += rowHeight + rowSpacing;
+            }
+
+            float contentHeight = y - rowSpacing + TableLayoutPadding;
+            return new GridRowLayout(yOffsets, heights, contentHeight);
+        }
+
+        private static float CalculateGridRowHeight(SerializedProperty element, List<TableColumn> columns)
+        {
+            float height = TableRowHeight;
+            if (columns == null || columns.Count == 0)
+            {
+                return Mathf.Max(height, CalculatePropertyCellHeight(element));
+            }
+
+            foreach (TableColumn column in columns)
+            {
+                if (column.IsDesignField)
+                {
+                    continue;
+                }
+
+                SerializedProperty cell = GetCellProperty(element, column);
+                if (cell != null)
+                {
+                    height = Mathf.Max(height, CalculatePropertyCellHeight(cell));
+                }
+            }
+
+            return height;
+        }
+
+        private static float CalculatePropertyCellHeight(SerializedProperty property)
+        {
+            return Mathf.Max(
+                TableRowHeight,
+                CalculatePropertyControlHeight(property) + CellControlVerticalPadding * 2f);
+        }
+
+        private static float CalculatePropertyControlHeight(SerializedProperty property)
+        {
+            if (property == null)
+            {
+                return EditorGUIUtility.singleLineHeight;
+            }
+
+            if (IsTableExpandableProperty(property))
+            {
+                return CalculateTablePropertyTreeHeight(property);
+            }
+
+            return EditorGUI.GetPropertyHeight(property, GUIContent.none, includeChildren: true);
+        }
+
+        private static float CalculateTablePropertyTreeHeight(SerializedProperty property)
+        {
+            float height = GetTablePropertyLineHeight(property);
+            if (!property.isExpanded)
+            {
+                return height;
+            }
+
+            SerializedProperty child = property.Copy();
+            SerializedProperty end = property.GetEndProperty();
+            bool enterChildren = true;
+            while (child.NextVisible(enterChildren) && !SerializedProperty.EqualContents(child, end))
+            {
+                height += EditorGUIUtility.standardVerticalSpacing + GetTablePropertyLineHeight(child);
+                enterChildren = ShouldDrawTablePropertyTree(child);
+            }
+
+            return height;
+        }
+
+        private static VisibleRowRange CalculateVisibleRowRange(
+            GridRowLayout rowLayout,
+            float scrollY,
+            float viewportHeight)
+        {
+            int rowCount = rowLayout.Count;
             if (rowCount <= 0)
             {
                 return new VisibleRowRange(0, 0);
             }
 
-            float rowPitch = CalculateGridRowPitch();
-            int startIndex = Mathf.FloorToInt(Mathf.Max(0f, scrollY) / rowPitch) - 1;
-            startIndex = Mathf.Clamp(startIndex, 0, rowCount - 1);
+            float viewportTop = Mathf.Max(0f, scrollY);
+            float viewportBottom = viewportTop + Mathf.Max(TableRowHeight, viewportHeight);
+            int startIndex = 0;
+            while (startIndex < rowCount - 1 && rowLayout.GetBottom(startIndex) < viewportTop)
+            {
+                startIndex++;
+            }
 
-            int visibleCount = Mathf.CeilToInt(Mathf.Max(TableRowHeight, viewportHeight) / rowPitch) + 3;
-            int endIndex = Mathf.Clamp(startIndex + visibleCount, startIndex + 1, rowCount);
+            startIndex = Mathf.Max(0, startIndex - 1);
+            int endIndex = startIndex;
+            while (endIndex < rowCount && rowLayout.GetY(endIndex) <= viewportBottom)
+            {
+                endIndex++;
+            }
+
+            endIndex = Mathf.Clamp(endIndex + 1, startIndex + 1, rowCount);
             return new VisibleRowRange(startIndex, endIndex);
-        }
-
-        private static float CalculateGridRowContentHeight(int rowCount)
-        {
-            int visibleRows = Mathf.Max(rowCount, 1);
-            float height = visibleRows * TableRowHeight + TableLayoutPadding;
-            height += Mathf.Max(0, visibleRows - 1) * EditorGUIUtility.standardVerticalSpacing;
-            return height;
         }
 
         private static float CalculateGridRowPitch()
@@ -5908,6 +6263,38 @@ namespace SpreadAsset.Editor
             First,
             Next,
             Previous
+        }
+
+        private readonly struct GridRowLayout
+        {
+            private readonly float[] _rowYs;
+            private readonly float[] _rowHeights;
+
+            public readonly float ContentHeight;
+
+            public GridRowLayout(float[] rowYs, float[] rowHeights, float contentHeight)
+            {
+                _rowYs = rowYs ?? Array.Empty<float>();
+                _rowHeights = rowHeights ?? Array.Empty<float>();
+                ContentHeight = Mathf.Max(TableRowHeight + TableLayoutPadding, contentHeight);
+            }
+
+            public int Count => _rowHeights?.Length ?? 0;
+
+            public float GetY(int rowIndex)
+            {
+                return rowIndex >= 0 && rowIndex < Count ? _rowYs[rowIndex] : 0f;
+            }
+
+            public float GetHeight(int rowIndex)
+            {
+                return rowIndex >= 0 && rowIndex < Count ? _rowHeights[rowIndex] : TableRowHeight;
+            }
+
+            public float GetBottom(int rowIndex)
+            {
+                return GetY(rowIndex) + GetHeight(rowIndex);
+            }
         }
 
         private readonly struct VisibleRowRange

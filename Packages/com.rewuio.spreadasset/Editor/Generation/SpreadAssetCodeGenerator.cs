@@ -62,18 +62,26 @@ namespace SpreadAsset.Editor
 
             foreach (SpreadAssetSchemaTable table in request.Schema.Tables)
             {
-                AppendSerializedField(builder, table.RowTypeName + "[]", table.FieldName, $"new {table.RowTypeName}[0]");
+                if (ShouldGenerateArrayField(table))
+                {
+                    AppendSerializedField(builder, table.RowTypeName + "[]", table.FieldName, $"new {table.RowTypeName}[0]");
+                }
             }
 
             foreach (SpreadAssetSchemaTable table in request.Schema.Tables)
             {
+                if (!ShouldGenerateArrayField(table))
+                {
+                    continue;
+                }
+
                 foreach (SpreadAssetSchemaField keyField in GetKeyFields(table))
                 {
                     AppendKeyLookupCacheField(builder, table, keyField);
                 }
             }
 
-            if (request.Schema.Fields.Length > 0 || request.Schema.Tables.Length > 0)
+            if (request.Schema.Fields.Length > 0 || HasGeneratedArrayField(request.Schema.Tables))
             {
                 builder.AppendLine();
             }
@@ -85,11 +93,19 @@ namespace SpreadAsset.Editor
 
             foreach (SpreadAssetSchemaTable table in request.Schema.Tables)
             {
-                AppendGetter(builder, table.RowTypeName + "[]", table.FieldName);
+                if (ShouldGenerateArrayField(table))
+                {
+                    AppendGetter(builder, table.RowTypeName + "[]", table.FieldName);
+                }
             }
 
             foreach (SpreadAssetSchemaTable table in request.Schema.Tables)
             {
+                if (!ShouldGenerateArrayField(table))
+                {
+                    continue;
+                }
+
                 foreach (SpreadAssetSchemaField keyField in GetKeyFields(table))
                 {
                     builder.AppendLine();
@@ -246,6 +262,11 @@ namespace SpreadAsset.Editor
                 builder.Append(childIndentation).AppendLine("{");
                 builder.Append(childIndentation).Append("    RowTypeName = \"").Append(EscapeString(table.RowTypeName)).AppendLine("\",");
                 builder.Append(childIndentation).Append("    FieldName = \"").Append(EscapeString(table.FieldName)).AppendLine("\",");
+                if (table.OmitArrayField)
+                {
+                    builder.Append(childIndentation).AppendLine("    OmitArrayField = true,");
+                }
+
                 builder.Append(childIndentation).Append("    Fields = ").Append(GenerateSchemaFields(table.Fields, indent + 8)).AppendLine();
                 builder.Append(childIndentation).AppendLine("},");
             }
@@ -278,10 +299,15 @@ namespace SpreadAsset.Editor
             foreach (SpreadAssetSchemaTable table in request.Schema.Tables)
             {
                 ValidateIdentifier(table.RowTypeName, "Data class name");
-                ValidateIdentifier(SpreadAssetNameUtility.ToPascalCase(table.FieldName), "Array field name");
+                if (!table.OmitArrayField || !string.IsNullOrWhiteSpace(table.FieldName))
+                {
+                    ValidateIdentifier(SpreadAssetNameUtility.ToPascalCase(table.FieldName), "Array field name");
+                }
+
                 foreach (SpreadAssetSchemaField field in table.Fields)
                 {
                     ValidateTypeName(field.TypeName, field.Name);
+                    ValidateDataFieldType(field.TypeName, field.Name, table, request.Schema.Tables);
                     ValidateIdentifier(SpreadAssetNameUtility.ToPascalCase(field.Name), "Data field name");
                     if (field.IsDesignField && field.IsKeyField)
                     {
@@ -289,6 +315,102 @@ namespace SpreadAsset.Editor
                     }
                 }
             }
+        }
+
+        private static void ValidateDataFieldType(
+            string typeName,
+            string fieldName,
+            SpreadAssetSchemaTable ownerTable,
+            SpreadAssetSchemaTable[] tables)
+        {
+            if (IsSupportedDataFieldType(typeName, ownerTable, tables))
+            {
+                return;
+            }
+
+            throw new ArgumentException(
+                $"Data field {fieldName} uses unsupported type {typeName}. Use a supported value type, primitive array, enum, or another data class declared in this asset schema. A data class cannot contain itself.");
+        }
+
+        private static bool IsSupportedDataFieldType(
+            string typeName,
+            SpreadAssetSchemaTable ownerTable,
+            SpreadAssetSchemaTable[] tables)
+        {
+            string normalizedTypeName = (typeName ?? string.Empty).Trim();
+            switch (normalizedTypeName)
+            {
+                case "string":
+                case "int":
+                case "float":
+                case "bool":
+                case "long":
+                case "double":
+                case "string[]":
+                case "int[]":
+                case "float[]":
+                case "bool[]":
+                case "long[]":
+                case "double[]":
+                case "Vector2":
+                case "Vector3":
+                case "Vector4":
+                case "Vector2Int":
+                case "Vector3Int":
+                case "Color":
+                case "Rect":
+                case "Bounds":
+                case "RectInt":
+                case "BoundsInt":
+                    return true;
+                default:
+                    return SpreadAssetEnumTypeUtility.TryGetAnnotatedEnumType(normalizedTypeName, out _)
+                        || IsSupportedDataClassFieldType(normalizedTypeName, ownerTable, tables);
+            }
+        }
+
+        private static bool IsSupportedDataClassFieldType(
+            string typeName,
+            SpreadAssetSchemaTable ownerTable,
+            SpreadAssetSchemaTable[] tables)
+        {
+            string elementTypeName = GetArrayElementTypeName(typeName);
+            if (string.IsNullOrWhiteSpace(elementTypeName) || tables == null)
+            {
+                return false;
+            }
+
+            string ownerRowTypeName = NormalizeDataClassTypeName(ownerTable?.RowTypeName);
+            foreach (SpreadAssetSchemaTable table in tables)
+            {
+                string rowTypeName = NormalizeDataClassTypeName(table?.RowTypeName);
+                if (string.IsNullOrEmpty(rowTypeName)
+                    || !string.Equals(rowTypeName, elementTypeName, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                return !string.Equals(rowTypeName, ownerRowTypeName, StringComparison.Ordinal);
+            }
+
+            return false;
+        }
+
+        private static string GetArrayElementTypeName(string typeName)
+        {
+            const string arraySuffix = "[]";
+            string normalizedTypeName = (typeName ?? string.Empty).Trim();
+            if (normalizedTypeName.EndsWith(arraySuffix, StringComparison.Ordinal))
+            {
+                normalizedTypeName = normalizedTypeName.Substring(0, normalizedTypeName.Length - arraySuffix.Length);
+            }
+
+            return NormalizeDataClassTypeName(normalizedTypeName);
+        }
+
+        private static string NormalizeDataClassTypeName(string typeName)
+        {
+            return SpreadAssetNameUtility.ToPascalCase(typeName?.Trim() ?? string.Empty);
         }
 
         private static bool HasRuntimeFields(SpreadAssetSchemaField[] fields)
@@ -301,6 +423,29 @@ namespace SpreadAsset.Editor
             foreach (SpreadAssetSchemaField field in fields)
             {
                 if (field != null && !field.IsDesignField)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool ShouldGenerateArrayField(SpreadAssetSchemaTable table)
+        {
+            return table != null && !table.OmitArrayField;
+        }
+
+        private static bool HasGeneratedArrayField(SpreadAssetSchemaTable[] tables)
+        {
+            if (tables == null)
+            {
+                return false;
+            }
+
+            foreach (SpreadAssetSchemaTable table in tables)
+            {
+                if (ShouldGenerateArrayField(table))
                 {
                     return true;
                 }
@@ -334,6 +479,11 @@ namespace SpreadAsset.Editor
 
             foreach (SpreadAssetSchemaTable table in tables)
             {
+                if (!ShouldGenerateArrayField(table))
+                {
+                    continue;
+                }
+
                 foreach (SpreadAssetSchemaField _ in GetKeyFields(table))
                 {
                     return true;
@@ -435,6 +585,11 @@ namespace SpreadAsset.Editor
             builder.AppendLine("        {");
             foreach (SpreadAssetSchemaTable table in tables)
             {
+                if (!ShouldGenerateArrayField(table))
+                {
+                    continue;
+                }
+
                 foreach (SpreadAssetSchemaField keyField in GetKeyFields(table))
                 {
                     builder.AppendLine($"            {GetKeyLookupFieldName(table, keyField)} = null;");
