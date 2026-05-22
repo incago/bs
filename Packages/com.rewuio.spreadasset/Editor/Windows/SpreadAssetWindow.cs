@@ -17,6 +17,9 @@ namespace SpreadAsset.Editor
         private const float MinimumColumnWidth = 100f;
         private const float MaximumColumnWidth = 360f;
         private const float DefaultColumnWidth = MinimumColumnWidth;
+        private const float ManualMinimumColumnWidth = 40f;
+        private const float ManualMaximumColumnWidth = 720f;
+        private const float ColumnResizeHandleWidth = 6f;
         private const float FormulaRowHeight = 22f;
         private const float TableRowHeight = 24f;
         private const float TableHeaderHeight = TableRowHeight * 2f;
@@ -390,8 +393,8 @@ namespace SpreadAsset.Editor
             }
 
             EditorGUILayout.Space(8);
-            List<TableColumn> columns = GetColumns(arrayProperty);
             SpreadAssetSheetState sheetState = GetOrCreateSheetState(arrayProperty);
+            List<TableColumn> columns = GetColumns(arrayProperty, sheetState);
             DrawFormulaPanel(arrayProperty, columns, sheetState);
             DrawSearchPanel(arrayProperty, columns, sheetState);
         }
@@ -414,8 +417,8 @@ namespace SpreadAsset.Editor
                 return;
             }
 
-            List<TableColumn> columns = GetColumns(arrayProperty);
             SpreadAssetSheetState sheetState = GetOrCreateSheetState(arrayProperty);
+            List<TableColumn> columns = GetColumns(arrayProperty, sheetState);
             DrawArrayToolbar(arrayProperty, sheetState);
             DrawArrayGrid(arrayProperty, columns, sheetState);
         }
@@ -938,6 +941,7 @@ namespace SpreadAsset.Editor
                 out int _,
                 out int focusedColumnIndex);
             DrawFrozenGridHeader(
+                sheetState,
                 columns,
                 dataWidth,
                 dataViewportWidth,
@@ -964,6 +968,7 @@ namespace SpreadAsset.Editor
         }
 
         private void DrawFrozenGridHeader(
+            SpreadAssetSheetState sheetState,
             List<TableColumn> columns,
             float dataWidth,
             float dataViewportWidth,
@@ -976,6 +981,7 @@ namespace SpreadAsset.Editor
             {
                 DrawFrozenGridCorner(frozenWidth, headerHeight);
                 DrawColumnHeaderCells(
+                    sheetState,
                     columns,
                     dataWidth,
                     dataViewportWidth,
@@ -1005,6 +1011,7 @@ namespace SpreadAsset.Editor
         }
 
         private void DrawColumnHeaderCells(
+            SpreadAssetSheetState sheetState,
             List<TableColumn> columns,
             float dataWidth,
             float dataViewportWidth,
@@ -1022,17 +1029,18 @@ namespace SpreadAsset.Editor
                 HandleHorizontalScrollWheel(viewportRect, dataWidth, dataViewportWidth, useHorizontalScroll);
                 DrawClippedTableArea(viewportRect, dataWidth, headerHeight, () =>
                 {
-                    DrawColumnHeaderContent(columns, dataWidth, headerHeight, focusedColumnIndex);
+                    DrawColumnHeaderContent(sheetState, columns, dataWidth, headerHeight, focusedColumnIndex);
                 });
             }
             else
             {
                 _tableScroll = Vector2.zero;
-                DrawColumnHeaderContent(columns, dataWidth, headerHeight, focusedColumnIndex);
+                DrawColumnHeaderContent(sheetState, columns, dataWidth, headerHeight, focusedColumnIndex);
             }
         }
 
-        private static void DrawColumnHeaderContent(
+        private void DrawColumnHeaderContent(
+            SpreadAssetSheetState sheetState,
             List<TableColumn> columns,
             float dataWidth,
             float headerHeight,
@@ -1052,6 +1060,7 @@ namespace SpreadAsset.Editor
                             GUILayout.Height(TableRowHeight));
                         DrawFocusedColumnHeaderBackground(headerRect, columnIndex == focusedColumnIndex);
                         GUI.Label(headerRect, GetColumnName(columnIndex), EditorStyles.boldLabel);
+                        HandleColumnResize(headerRect, sheetState, columns, columnIndex);
                     }
                 }
 
@@ -1067,9 +1076,87 @@ namespace SpreadAsset.Editor
                             GUILayout.Height(TableRowHeight));
                         DrawFocusedColumnHeaderBackground(headerRect, columnIndex == focusedColumnIndex);
                         GUI.Label(headerRect, column.HeaderLabel, EditorStyles.miniLabel);
+                        HandleColumnResize(headerRect, sheetState, columns, columnIndex);
                     }
                 }
             }
+        }
+
+        private void HandleColumnResize(
+            Rect headerRect,
+            SpreadAssetSheetState sheetState,
+            List<TableColumn> columns,
+            int columnIndex)
+        {
+            if (sheetState == null || columns == null || columnIndex < 0 || columnIndex >= columns.Count)
+            {
+                return;
+            }
+
+            Rect handleRect = new Rect(
+                headerRect.xMax - ColumnResizeHandleWidth * 0.5f,
+                headerRect.y,
+                ColumnResizeHandleWidth,
+                headerRect.height);
+            EditorGUIUtility.AddCursorRect(handleRect, MouseCursor.ResizeHorizontal);
+
+            int controlId = GUIUtility.GetControlID(columnIndex + 100000, FocusType.Passive, handleRect);
+            Event current = Event.current;
+            switch (current.GetTypeForControl(controlId))
+            {
+                case EventType.MouseDown:
+                    if (current.button == 0 && handleRect.Contains(current.mousePosition))
+                    {
+                        GUIUtility.hotControl = controlId;
+                        current.Use();
+                    }
+                    break;
+                case EventType.MouseDrag:
+                    if (GUIUtility.hotControl == controlId)
+                    {
+                        ResizeColumn(sheetState, columns, columnIndex, columns[columnIndex].Width + current.delta.x);
+                        current.Use();
+                    }
+                    break;
+                case EventType.MouseUp:
+                    if (GUIUtility.hotControl == controlId)
+                    {
+                        GUIUtility.hotControl = 0;
+                        current.Use();
+                    }
+                    break;
+                case EventType.Repaint:
+                    if (GUIUtility.hotControl == controlId || handleRect.Contains(current.mousePosition))
+                    {
+                        Rect lineRect = new Rect(headerRect.xMax - 1f, headerRect.y + 3f, 1f, headerRect.height - 6f);
+                        EditorGUI.DrawRect(lineRect, EditorGUIUtility.isProSkin
+                            ? new Color(0.74f, 0.82f, 0.95f, 0.65f)
+                            : new Color(0.22f, 0.36f, 0.68f, 0.55f));
+                    }
+                    break;
+            }
+        }
+
+        private void ResizeColumn(
+            SpreadAssetSheetState sheetState,
+            List<TableColumn> columns,
+            int columnIndex,
+            float requestedWidth)
+        {
+            float width = Mathf.Clamp(requestedWidth, ManualMinimumColumnWidth, ManualMaximumColumnWidth);
+            TableColumn column = columns[columnIndex];
+            if (Mathf.Approximately(column.Width, width))
+            {
+                return;
+            }
+
+            columns[columnIndex] = column.WithWidth(width);
+            if (SetSheetColumnWidth(sheetState, column, width))
+            {
+                _isDocumentDirty = true;
+            }
+
+            Repaint();
         }
 
         private void DrawFrozenGridHorizontalScrollbar(
@@ -2061,6 +2148,137 @@ namespace SpreadAsset.Editor
             return true;
         }
 
+        private static void ApplyColumnWidths(List<TableColumn> columns, SpreadAssetSheetState sheetState)
+        {
+            if (columns == null || sheetState?.Columns == null)
+            {
+                return;
+            }
+
+            for (int columnIndex = 0; columnIndex < columns.Count; columnIndex++)
+            {
+                TableColumn column = columns[columnIndex];
+                SpreadAssetColumnState columnState = FindSheetColumn(sheetState, column);
+                if (columnState == null || columnState.Width <= 0f)
+                {
+                    continue;
+                }
+
+                float width = Mathf.Clamp(columnState.Width, ManualMinimumColumnWidth, ManualMaximumColumnWidth);
+                columns[columnIndex] = column.WithWidth(width);
+            }
+        }
+
+        private static bool SetSheetColumnWidth(SpreadAssetSheetState sheetState, TableColumn column, float width)
+        {
+            if (sheetState == null)
+            {
+                return false;
+            }
+
+            if (sheetState.Columns == null)
+            {
+                sheetState.Columns = Array.Empty<SpreadAssetColumnState>();
+            }
+
+            SpreadAssetColumnState columnState = FindSheetColumn(sheetState, column);
+            if (columnState == null)
+            {
+                columnState = new SpreadAssetColumnState
+                {
+                    ColumnId = column.FieldId,
+                    ColumnName = GetColumnStateName(column)
+                };
+
+                Array.Resize(ref sheetState.Columns, sheetState.Columns.Length + 1);
+                sheetState.Columns[sheetState.Columns.Length - 1] = columnState;
+            }
+
+            bool changed = !Mathf.Approximately(columnState.Width, width);
+            columnState.Width = width;
+            changed |= BackfillSheetColumnIdentity(columnState, column);
+            return changed;
+        }
+
+        private static SpreadAssetColumnState FindSheetColumn(SpreadAssetSheetState sheetState, TableColumn column)
+        {
+            if (sheetState?.Columns == null)
+            {
+                return null;
+            }
+
+            string columnName = GetColumnStateName(column);
+            SpreadAssetColumnState fallbackColumn = null;
+            foreach (SpreadAssetColumnState columnState in sheetState.Columns)
+            {
+                if (columnState == null)
+                {
+                    continue;
+                }
+
+                if (!string.IsNullOrEmpty(column.FieldId)
+                    && string.Equals(columnState.ColumnId, column.FieldId, StringComparison.Ordinal))
+                {
+                    BackfillSheetColumnIdentity(columnState, column);
+                    return columnState;
+                }
+
+                if (fallbackColumn == null
+                    && !string.IsNullOrEmpty(columnName)
+                    && string.Equals(columnState.ColumnName, columnName, StringComparison.Ordinal))
+                {
+                    fallbackColumn = columnState;
+                }
+            }
+
+            if (fallbackColumn != null)
+            {
+                BackfillSheetColumnIdentity(fallbackColumn, column);
+            }
+
+            return fallbackColumn;
+        }
+
+        private static bool BackfillSheetColumnIdentity(SpreadAssetColumnState columnState, TableColumn column)
+        {
+            if (columnState == null)
+            {
+                return false;
+            }
+
+            bool changed = false;
+            if (string.IsNullOrEmpty(columnState.ColumnId) && !string.IsNullOrEmpty(column.FieldId))
+            {
+                columnState.ColumnId = column.FieldId;
+                changed = true;
+            }
+
+            string columnName = GetColumnStateName(column);
+            if (!string.IsNullOrEmpty(columnName)
+                && !string.Equals(columnState.ColumnName, columnName, StringComparison.Ordinal))
+            {
+                columnState.ColumnName = columnName;
+                changed = true;
+            }
+
+            return changed;
+        }
+
+        private static string GetColumnStateName(TableColumn column)
+        {
+            if (!string.IsNullOrEmpty(column.SchemaName))
+            {
+                return column.SchemaName;
+            }
+
+            if (!string.IsNullOrEmpty(column.PropertyName))
+            {
+                return column.PropertyName;
+            }
+
+            return column.DisplayName ?? string.Empty;
+        }
+
         private static string GetDesignCellValue(
             SpreadAssetSheetState sheetState,
             int rowIndex,
@@ -2432,6 +2650,7 @@ namespace SpreadAsset.Editor
                     {
                         ArrayFieldName = table.FieldName,
                         Formulas = Array.Empty<SpreadAssetFormulaState>(),
+                        Columns = Array.Empty<SpreadAssetColumnState>(),
                         Cells = Array.Empty<SpreadAssetCellState>()
                     });
                     changed = true;
@@ -2450,6 +2669,13 @@ namespace SpreadAsset.Editor
                     changed = true;
                 }
 
+                if (sheet.Columns == null)
+                {
+                    sheet.Columns = Array.Empty<SpreadAssetColumnState>();
+                    changed = true;
+                }
+
+                changed |= EnsureSheetColumnsUseFieldIds(sheet, table);
                 changed |= EnsureSheetCellsUseFieldIds(sheet, table);
             }
 
@@ -2780,6 +3006,7 @@ namespace SpreadAsset.Editor
                     }
 
                     changed |= MigrateSheetCellsForTableChange(sheet, previousTable, nextTable);
+                    changed |= MigrateSheetColumnsForTableChange(sheet, previousTable, nextTable);
                 }
             }
 
@@ -2826,6 +3053,46 @@ namespace SpreadAsset.Editor
             return changed;
         }
 
+        private static bool MigrateSheetColumnsForTableChange(
+            SpreadAssetSheetState sheet,
+            SpreadAssetSchemaTable previousTable,
+            SpreadAssetSchemaTable nextTable)
+        {
+            if (sheet?.Columns == null)
+            {
+                return false;
+            }
+
+            bool changed = false;
+            foreach (SpreadAssetColumnState column in sheet.Columns)
+            {
+                if (column == null)
+                {
+                    continue;
+                }
+
+                if (string.IsNullOrEmpty(column.ColumnId))
+                {
+                    SpreadAssetSchemaField previousField = FindFieldByName(previousTable.Fields, column.ColumnName);
+                    if (previousField != null)
+                    {
+                        column.ColumnId = previousField.Id;
+                        changed = true;
+                    }
+                }
+
+                SpreadAssetSchemaField nextField = FindFieldById(nextTable.Fields, column.ColumnId);
+                if (nextField != null
+                    && !string.Equals(column.ColumnName, nextField.Name, StringComparison.Ordinal))
+                {
+                    column.ColumnName = nextField.Name;
+                    changed = true;
+                }
+            }
+
+            return changed;
+        }
+
         private static bool EnsureSheetCellsUseFieldIds(
             SpreadAssetSheetState sheet,
             SpreadAssetSchemaTable table)
@@ -2859,6 +3126,46 @@ namespace SpreadAsset.Editor
                 if (!string.Equals(cell.ColumnName, field.Name, StringComparison.Ordinal))
                 {
                     cell.ColumnName = field.Name;
+                    changed = true;
+                }
+            }
+
+            return changed;
+        }
+
+        private static bool EnsureSheetColumnsUseFieldIds(
+            SpreadAssetSheetState sheet,
+            SpreadAssetSchemaTable table)
+        {
+            if (sheet?.Columns == null || table?.Fields == null)
+            {
+                return false;
+            }
+
+            bool changed = false;
+            foreach (SpreadAssetColumnState column in sheet.Columns)
+            {
+                if (column == null)
+                {
+                    continue;
+                }
+
+                SpreadAssetSchemaField field = FindFieldById(table.Fields, column.ColumnId)
+                    ?? FindFieldByName(table.Fields, column.ColumnName);
+                if (field == null)
+                {
+                    continue;
+                }
+
+                if (!string.Equals(column.ColumnId, field.Id, StringComparison.Ordinal))
+                {
+                    column.ColumnId = field.Id;
+                    changed = true;
+                }
+
+                if (!string.Equals(column.ColumnName, field.Name, StringComparison.Ordinal))
+                {
+                    column.ColumnName = field.Name;
                     changed = true;
                 }
             }
@@ -3322,6 +3629,11 @@ namespace SpreadAsset.Editor
                         sheet.Cells = Array.Empty<SpreadAssetCellState>();
                     }
 
+                    if (sheet.Columns == null)
+                    {
+                        sheet.Columns = Array.Empty<SpreadAssetColumnState>();
+                    }
+
                     return sheet;
                 }
             }
@@ -3330,6 +3642,7 @@ namespace SpreadAsset.Editor
             {
                 ArrayFieldName = sheetKey,
                 Formulas = Array.Empty<SpreadAssetFormulaState>(),
+                Columns = Array.Empty<SpreadAssetColumnState>(),
                 Cells = Array.Empty<SpreadAssetCellState>()
             };
 
@@ -3483,22 +3796,29 @@ namespace SpreadAsset.Editor
             }
         }
 
-        private List<TableColumn> GetColumns(SerializedProperty arrayProperty)
+        private List<TableColumn> GetColumns(SerializedProperty arrayProperty, SpreadAssetSheetState sheetState = null)
         {
+            List<TableColumn> columns;
             SpreadAssetSchemaTable schemaTable = FindSchemaTable(arrayProperty);
             if (schemaTable?.Fields != null && schemaTable.Fields.Length > 0)
             {
-                return GetColumnsFromSchema(schemaTable);
+                columns = GetColumnsFromSchema(schemaTable);
+                ApplyColumnWidths(columns, sheetState);
+                return columns;
             }
 
             FieldInfo arrayField = FindField(_targetAsset.GetType(), arrayProperty.propertyPath);
             Type elementType = GetElementType(arrayField?.FieldType);
             if (arrayProperty.arraySize > 0)
             {
-                return GetColumnsFromFirstElement(arrayProperty.GetArrayElementAtIndex(0), elementType);
+                columns = GetColumnsFromFirstElement(arrayProperty.GetArrayElementAtIndex(0), elementType);
+                ApplyColumnWidths(columns, sheetState);
+                return columns;
             }
 
-            return GetColumnsFromReflection(elementType);
+            columns = GetColumnsFromReflection(elementType);
+            ApplyColumnWidths(columns, sheetState);
+            return columns;
         }
 
         private SpreadAssetSchemaTable FindSchemaTable(SerializedProperty arrayProperty)
@@ -4412,6 +4732,19 @@ namespace SpreadAsset.Editor
                 SchemaName = schemaName;
                 IsDesignField = isDesignField;
                 FieldId = fieldId ?? string.Empty;
+            }
+
+            public TableColumn WithWidth(float width)
+            {
+                return new TableColumn(
+                    PropertyName,
+                    DisplayName,
+                    TypeName,
+                    HeaderLabel,
+                    width,
+                    SchemaName,
+                    IsDesignField,
+                    FieldId);
             }
         }
     }

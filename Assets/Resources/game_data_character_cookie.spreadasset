@@ -159,6 +159,18 @@
                     "Expression": "F = D + '_skeletonData'"
                 }
             ],
+            "Columns": [
+                {
+                    "ColumnId": "field_a631c88c0301bb17",
+                    "ColumnName": "Id",
+                    "Width": 40.0
+                },
+                {
+                    "ColumnId": "field_d65905368e261141",
+                    "ColumnName": "Weight",
+                    "Width": 47.535003662109378
+                }
+            ],
             "Cells": [
                 {
                     "Row": 0,
@@ -8165,6 +8177,7 @@
         {
             "ArrayFieldName": "SkillDatas",
             "Formulas": [],
+            "Columns": [],
             "Cells": []
         }
     ]

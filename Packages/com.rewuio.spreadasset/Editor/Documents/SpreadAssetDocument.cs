@@ -46,6 +46,7 @@ namespace SpreadAsset.Editor
     {
         public string ArrayFieldName = string.Empty;
         public SpreadAssetFormulaState[] Formulas = Array.Empty<SpreadAssetFormulaState>();
+        public SpreadAssetColumnState[] Columns = Array.Empty<SpreadAssetColumnState>();
         public SpreadAssetCellState[] Cells = Array.Empty<SpreadAssetCellState>();
     }
 
@@ -66,5 +67,13 @@ namespace SpreadAsset.Editor
         public string Value = string.Empty;
         public string Formula = string.Empty;
         public string Note = string.Empty;
+    }
+
+    [Serializable]
+    public sealed class SpreadAssetColumnState
+    {
+        public string ColumnId = string.Empty;
+        public string ColumnName = string.Empty;
+        public float Width;
     }
 }
