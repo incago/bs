@@ -135,9 +135,11 @@ D = 'cookie' + FORMAT(A, '0000')
 
 수식 결과는 `.spreadasset` 원본 문서에 저장되고, `Save & Export`를 누르면 연결된 `.asset`에 export됩니다.
 
-## 사용자 enum 필드 타입
+## 커스텀 필드 타입
 
-프로젝트에서 정의한 enum을 SpreadAsset Generator의 데이터 필드 타입 드롭다운에 표시하려면 enum에 `SpreadAssetEnumAttribute`를 붙입니다.
+SpreadAsset Generator는 기본적으로 짧은 추천 타입 목록만 보여줍니다. `Custom...`을 선택하면 `AnimationCurve`, `Gradient`, `List<float>`, namespace가 포함된 enum, 프로젝트 class 같은 Unity 직렬화 가능 필드 타입을 직접 입력할 수 있습니다.
+
+프로젝트에서 정의한 enum을 데이터 필드 타입 드롭다운에 표시하려면 enum에 `SpreadAssetEnumAttribute`를 붙입니다.
 
 ```csharp
 using SpreadAsset;
@@ -154,7 +156,26 @@ namespace Game.Data
 }
 ```
 
-어노테이션이 붙은 enum만 SpreadAsset Generator에 표시되므로 Unity나 외부 패키지 enum이 타입 목록을 복잡하게 만들지 않습니다. 생성된 필드는 `Game.Data.ItemCategory`처럼 namespace가 포함된 enum 타입으로 저장됩니다.
+프로젝트 class 또는 struct를 드롭다운에 표시하려면 `SpreadAssetClassAttribute`를 붙입니다. 일반 class와 struct는 Unity가 직렬화할 수 있도록 `[Serializable]`도 함께 붙여야 합니다.
+
+```csharp
+using System;
+using SpreadAsset;
+using UnityEngine;
+
+namespace Game.Data
+{
+    [Serializable]
+    [SpreadAssetClass]
+    public sealed class RewardCurve
+    {
+        public AnimationCurve Curve;
+        public float Multiplier;
+    }
+}
+```
+
+어노테이션이 붙은 프로젝트 enum/class만 SpreadAsset Generator에 표시되므로 Unity나 외부 패키지 타입이 목록을 복잡하게 만들지 않습니다. 생성된 필드는 선택한 타입명을 그대로 저장하므로, 커스텀 입력에는 `Game.Data.ItemCategory` 또는 `Game.Data.RewardCurve`처럼 namespace가 포함된 이름을 쓰는 것이 가장 안전합니다.
 
 ## 생성된 schema 수정하기
 

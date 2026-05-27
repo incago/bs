@@ -5484,6 +5484,9 @@ namespace SpreadAsset.Editor
                 case SerializedPropertyType.Color:
                     property.colorValue = Color.white;
                     break;
+                case SerializedPropertyType.AnimationCurve:
+                    property.animationCurveValue = new AnimationCurve();
+                    break;
                 case SerializedPropertyType.ObjectReference:
                     property.objectReferenceValue = null;
                     break;
@@ -6201,6 +6204,8 @@ namespace SpreadAsset.Editor
                     return "string";
                 case SerializedPropertyType.Color:
                     return "Color";
+                case SerializedPropertyType.AnimationCurve:
+                    return "AnimationCurve";
                 case SerializedPropertyType.ObjectReference:
                     return string.IsNullOrEmpty(property.type) ? "Object" : property.type;
                 case SerializedPropertyType.LayerMask:

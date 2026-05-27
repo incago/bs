@@ -135,9 +135,11 @@ Column formulas apply to every row in that column. Cell formulas have higher pri
 
 Formula results are saved into the `.spreadasset` source document and exported into the linked `.asset` when you click `Save & Export`.
 
-## User Enum Field Types
+## Custom Field Types
 
-To expose a project enum in SpreadAsset Generator data field type dropdowns, mark the enum with `SpreadAssetEnumAttribute`.
+SpreadAsset Generator shows a short recommended type list by default. Choose `Custom...` to type another Unity-serializable field type directly, such as `AnimationCurve`, `Gradient`, `List<float>`, a namespace-qualified enum, or a project class.
+
+To expose a project enum in the data field type dropdown, mark the enum with `SpreadAssetEnumAttribute`.
 
 ```csharp
 using SpreadAsset;
@@ -154,7 +156,26 @@ namespace Game.Data
 }
 ```
 
-Only annotated enums are shown in SpreadAsset Generator, so Unity and third-party package enums do not clutter the type list. Generated fields store the namespace-qualified enum type, such as `Game.Data.ItemCategory`.
+To expose a project class or struct in the dropdown, mark it with `SpreadAssetClassAttribute`. Plain classes and structs must also be Unity-serializable.
+
+```csharp
+using System;
+using SpreadAsset;
+using UnityEngine;
+
+namespace Game.Data
+{
+    [Serializable]
+    [SpreadAssetClass]
+    public sealed class RewardCurve
+    {
+        public AnimationCurve Curve;
+        public float Multiplier;
+    }
+}
+```
+
+Only annotated project enums/classes are shown in SpreadAsset Generator, so Unity and third-party package types do not clutter the type list. Generated fields store the type name you choose, so namespace-qualified names such as `Game.Data.ItemCategory` or `Game.Data.RewardCurve` are safest for custom entries.
 
 ## Updating Generated Schemas
 

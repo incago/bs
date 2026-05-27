@@ -32,4 +32,6 @@ Use `Export CSV` and `Import CSV` in the SpreadAsset window to round-trip the cu
 
 Formula rows can be added above each array table. Formulas can target a whole column, such as `C = A + B`, a single cell, such as `C1 = A1 + B1`, or concatenate strings, such as `D = C + '_key'`. Columns are labeled `A`, `B`, `C` and rows start at `1`.
 
-To make a user-defined enum available as a SpreadAsset Generator data field type, mark it with `[SpreadAssetEnum]`. Only annotated enums are added to the dropdown.
+SpreadAsset Generator keeps the data field type dropdown intentionally short. Use `Custom...` to enter another Unity-serializable type directly, such as `AnimationCurve`, `Gradient`, `List<float>`, or a namespace-qualified project type.
+
+To make a user-defined enum available in the dropdown, mark it with `[SpreadAssetEnum]`. To make a Unity-serializable project class or struct available in the dropdown, mark it with `[SpreadAssetClass]`; plain classes and structs should also have `[System.Serializable]`. Only annotated project types are added to the dropdown so Unity and third-party package types do not clutter the list.

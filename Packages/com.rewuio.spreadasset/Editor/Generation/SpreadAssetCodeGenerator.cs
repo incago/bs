@@ -40,6 +40,11 @@ namespace SpreadAsset.Editor
         {
             StringBuilder builder = new StringBuilder();
             builder.AppendLine("using SpreadAsset;");
+            if (UsesGenericListType(request.Schema))
+            {
+                builder.AppendLine("using System.Collections.Generic;");
+            }
+
             builder.AppendLine("using UnityEngine;");
             builder.AppendLine();
             builder.AppendLine($"namespace {request.NamespaceName}");
@@ -323,94 +328,12 @@ namespace SpreadAsset.Editor
             SpreadAssetSchemaTable ownerTable,
             SpreadAssetSchemaTable[] tables)
         {
-            if (IsSupportedDataFieldType(typeName, ownerTable, tables))
+            if (SpreadAssetFieldTypeUtility.IsSupportedDataFieldType(typeName, ownerTable, tables))
             {
                 return;
             }
 
-            throw new ArgumentException(
-                $"Data field {fieldName} uses unsupported type {typeName}. Use a supported value type, primitive array, enum, or another data class declared in this asset schema. A data class cannot contain itself.");
-        }
-
-        private static bool IsSupportedDataFieldType(
-            string typeName,
-            SpreadAssetSchemaTable ownerTable,
-            SpreadAssetSchemaTable[] tables)
-        {
-            string normalizedTypeName = (typeName ?? string.Empty).Trim();
-            switch (normalizedTypeName)
-            {
-                case "string":
-                case "int":
-                case "float":
-                case "bool":
-                case "long":
-                case "double":
-                case "string[]":
-                case "int[]":
-                case "float[]":
-                case "bool[]":
-                case "long[]":
-                case "double[]":
-                case "Vector2":
-                case "Vector3":
-                case "Vector4":
-                case "Vector2Int":
-                case "Vector3Int":
-                case "Color":
-                case "Rect":
-                case "Bounds":
-                case "RectInt":
-                case "BoundsInt":
-                    return true;
-                default:
-                    return SpreadAssetEnumTypeUtility.TryGetAnnotatedEnumType(normalizedTypeName, out _)
-                        || IsSupportedDataClassFieldType(normalizedTypeName, ownerTable, tables);
-            }
-        }
-
-        private static bool IsSupportedDataClassFieldType(
-            string typeName,
-            SpreadAssetSchemaTable ownerTable,
-            SpreadAssetSchemaTable[] tables)
-        {
-            string elementTypeName = GetArrayElementTypeName(typeName);
-            if (string.IsNullOrWhiteSpace(elementTypeName) || tables == null)
-            {
-                return false;
-            }
-
-            string ownerRowTypeName = NormalizeDataClassTypeName(ownerTable?.RowTypeName);
-            foreach (SpreadAssetSchemaTable table in tables)
-            {
-                string rowTypeName = NormalizeDataClassTypeName(table?.RowTypeName);
-                if (string.IsNullOrEmpty(rowTypeName)
-                    || !string.Equals(rowTypeName, elementTypeName, StringComparison.Ordinal))
-                {
-                    continue;
-                }
-
-                return !string.Equals(rowTypeName, ownerRowTypeName, StringComparison.Ordinal);
-            }
-
-            return false;
-        }
-
-        private static string GetArrayElementTypeName(string typeName)
-        {
-            const string arraySuffix = "[]";
-            string normalizedTypeName = (typeName ?? string.Empty).Trim();
-            if (normalizedTypeName.EndsWith(arraySuffix, StringComparison.Ordinal))
-            {
-                normalizedTypeName = normalizedTypeName.Substring(0, normalizedTypeName.Length - arraySuffix.Length);
-            }
-
-            return NormalizeDataClassTypeName(normalizedTypeName);
-        }
-
-        private static string NormalizeDataClassTypeName(string typeName)
-        {
-            return SpreadAssetNameUtility.ToPascalCase(typeName?.Trim() ?? string.Empty);
+            throw new ArgumentException(SpreadAssetFieldTypeUtility.GetUnsupportedDataFieldTypeMessage(fieldName, typeName));
         }
 
         private static bool HasRuntimeFields(SpreadAssetSchemaField[] fields)
@@ -425,6 +348,30 @@ namespace SpreadAsset.Editor
                 if (field != null && !field.IsDesignField)
                 {
                     return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool UsesGenericListType(SpreadAssetDocumentSchema schema)
+        {
+            foreach (SpreadAssetSchemaField field in schema.Fields ?? Array.Empty<SpreadAssetSchemaField>())
+            {
+                if (field != null && SpreadAssetFieldTypeUtility.IsGenericListTypeName(field.TypeName))
+                {
+                    return true;
+                }
+            }
+
+            foreach (SpreadAssetSchemaTable table in schema.Tables ?? Array.Empty<SpreadAssetSchemaTable>())
+            {
+                foreach (SpreadAssetSchemaField field in table?.Fields ?? Array.Empty<SpreadAssetSchemaField>())
+                {
+                    if (field != null && SpreadAssetFieldTypeUtility.IsGenericListTypeName(field.TypeName))
+                    {
+                        return true;
+                    }
                 }
             }
 

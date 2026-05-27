@@ -10,31 +10,7 @@ namespace SpreadAsset.Editor
     {
         private const string WindowTitle = "SpreadAsset Generator";
         private static GUIStyle _columnLabelStyle;
-        private static readonly string[] DataFieldTypeNames =
-        {
-            "string",
-            "int",
-            "float",
-            "bool",
-            "long",
-            "double",
-            "string[]",
-            "int[]",
-            "float[]",
-            "bool[]",
-            "long[]",
-            "double[]",
-            "Vector2",
-            "Vector3",
-            "Vector4",
-            "Vector2Int",
-            "Vector3Int",
-            "Color",
-            "Rect",
-            "Bounds",
-            "RectInt",
-            "BoundsInt"
-        };
+        private static readonly string[] DataFieldTypeNames = SpreadAssetFieldTypeUtility.RecommendedDataFieldTypeNames;
 
         private readonly List<FieldDraft> _assetFields = new List<FieldDraft>();
         private readonly List<TableDraft> _tables = new List<TableDraft>();
@@ -213,9 +189,14 @@ namespace SpreadAsset.Editor
                     DrawColumnLabel(index);
                 }
 
-                field.TypeName = allowDesignField
-                    ? DrawDataFieldTypePopup(field.TypeName, dataFieldTypeNames)
-                    : EditorGUILayout.TextField(field.TypeName, GUILayout.MinWidth(90));
+                if (allowDesignField)
+                {
+                    DrawDataFieldTypePopup(field, dataFieldTypeNames);
+                }
+                else
+                {
+                    field.TypeName = EditorGUILayout.TextField(field.TypeName, GUILayout.MinWidth(90));
+                }
                 field.Name = EditorGUILayout.TextField(field.Name, GUILayout.MinWidth(120));
                 if (allowDesignField)
                 {
@@ -332,10 +313,10 @@ namespace SpreadAsset.Editor
         {
             List<string> typeNames = new List<string>(DataFieldTypeNames);
             HashSet<string> usedTypeNames = new HashSet<string>(DataFieldTypeNames, StringComparer.Ordinal);
-            string ownerRowTypeName = NormalizeDataClassTypeName(ownerTable?.RowTypeName);
+            string ownerRowTypeName = SpreadAssetFieldTypeUtility.NormalizeDataClassTypeName(ownerTable?.RowTypeName);
             foreach (TableDraft table in _tables)
             {
-                string rowTypeName = NormalizeDataClassTypeName(table?.RowTypeName);
+                string rowTypeName = SpreadAssetFieldTypeUtility.NormalizeDataClassTypeName(table?.RowTypeName);
                 if (string.IsNullOrEmpty(rowTypeName)
                     || string.Equals(rowTypeName, ownerRowTypeName, StringComparison.Ordinal))
                 {
@@ -360,31 +341,33 @@ namespace SpreadAsset.Editor
             }
         }
 
-        private static string DrawDataFieldTypePopup(string currentTypeName, string[] dataFieldTypeNames)
+        private static void DrawDataFieldTypePopup(FieldDraft field, string[] dataFieldTypeNames)
         {
-            if (!IsSupportedDataFieldType(currentTypeName, dataFieldTypeNames))
-            {
-                EditorGUILayout.LabelField(
-                    string.IsNullOrWhiteSpace(currentTypeName)
-                        ? "Unsupported"
-                        : currentTypeName.Trim() + " (unsupported)",
-                    EditorStyles.miniLabel,
-                    GUILayout.MinWidth(120));
-                if (GUILayout.Button("Reset", GUILayout.Width(52)))
-                {
-                    return "int";
-                }
-
-                return currentTypeName;
-            }
-
             SpreadAssetEnumTypeUtility.TypePopupOptions options =
-                SpreadAssetEnumTypeUtility.CreatePopupOptions(dataFieldTypeNames ?? DataFieldTypeNames, currentTypeName);
+                SpreadAssetEnumTypeUtility.CreatePopupOptions(dataFieldTypeNames ?? DataFieldTypeNames, field.TypeName);
+            int currentIndex = field.UseCustomType ? options.CustomIndex : options.SelectedIndex;
             int selectedIndex = EditorGUILayout.Popup(
-                options.SelectedIndex,
+                currentIndex,
                 options.DisplayNames,
                 GUILayout.MinWidth(90));
-            return options.TypeNames[Mathf.Clamp(selectedIndex, 0, options.TypeNames.Length - 1)];
+
+            selectedIndex = Mathf.Clamp(selectedIndex, 0, options.TypeNames.Length - 1);
+            if (selectedIndex != options.CustomIndex)
+            {
+                field.UseCustomType = false;
+                field.TypeName = options.TypeNames[selectedIndex];
+                return;
+            }
+
+            field.UseCustomType = true;
+            field.TypeName = EditorGUILayout.TextField(field.TypeName, GUILayout.MinWidth(130));
+            if (!IsSupportedDataFieldType(field.TypeName, dataFieldTypeNames))
+            {
+                EditorGUILayout.LabelField(
+                    new GUIContent("!", "This type is not currently supported as a SpreadAsset data field."),
+                    EditorStyles.boldLabel,
+                    GUILayout.Width(14));
+            }
         }
 
         private static bool IsSupportedDataFieldType(string typeName, string[] dataFieldTypeNames)
@@ -403,12 +386,10 @@ namespace SpreadAsset.Editor
                 }
             }
 
-            return SpreadAssetEnumTypeUtility.TryGetAnnotatedEnumType(normalizedTypeName, out _);
-        }
-
-        private static string NormalizeDataClassTypeName(string typeName)
-        {
-            return SpreadAssetNameUtility.ToPascalCase(typeName?.Trim() ?? string.Empty);
+            return SpreadAssetFieldTypeUtility.IsSupportedDataFieldType(
+                normalizedTypeName,
+                ownerTable: null,
+                tables: Array.Empty<SpreadAssetSchemaTable>());
         }
 
         private void Generate()
@@ -787,6 +768,7 @@ namespace SpreadAsset.Editor
             public string Name;
             public bool IsDesignField;
             public bool IsKeyField;
+            public bool UseCustomType;
             public string Id;
 
             public FieldDraft(
