@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.3
+
+- Added SpreadAsset Generator custom data field type entry for Unity-serializable types such as `AnimationCurve`, `Gradient`, `List<T>`, object references, enums, and serializable project classes.
+- Added `[SpreadAssetClass]` for surfacing annotated project classes and structs in the Generator field type dropdown.
+- Kept the Generator type dropdown focused on recommended types while preserving custom direct type entry.
+- Updated sample stage data to exercise enum, prefab reference, double, and animation curve fields.
+- Documented custom field type entry and `[SpreadAssetClass]` usage.
+
 ## 0.1.2
 
 - Added SpreadAsset Generator support for data-class-only array table definitions that generate nested data classes without creating asset-level array fields.
