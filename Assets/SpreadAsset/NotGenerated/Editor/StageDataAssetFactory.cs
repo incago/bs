@@ -28,6 +28,9 @@ namespace SpreadAsset.Generated.Editor
                             new SpreadAssetSchemaField { Id = "field_eaa1fa9d2d6d3a6a", TypeName = "string", Name = "LastName" },
                             new SpreadAssetSchemaField { Id = "field_424352ca1d5d24a4", TypeName = "float", Name = "Weight" },
                             new SpreadAssetSchemaField { Id = "field_0938a8729add4c078c178137c15f89c2", TypeName = "int[]", Name = "RoomDataIds" },
+                            new SpreadAssetSchemaField { Id = "field_6847da1bde274c599b544c8d13350cef", TypeName = "SpreadAsset.NotGenerated.UserEnum", Name = "Type" },
+                            new SpreadAssetSchemaField { Id = "field_f827695b80264c9688625891586ae87d", TypeName = "TestScript", Name = "Prefab" },
+                            new SpreadAssetSchemaField { Id = "field_ec70ef179e8a460aa7f8e1417083edf8", TypeName = "AnimationCurve", Name = "Curve" },
                         }
                     },
                     new SpreadAssetSchemaTable
@@ -38,6 +41,9 @@ namespace SpreadAsset.Generated.Editor
                         {
                             new SpreadAssetSchemaField { Id = "field_d97946bdcfb24f31911c5e9fdc5cfee8", TypeName = "int", Name = "Id", IsKeyField = true },
                             new SpreadAssetSchemaField { Id = "field_252739a3695e40208f43da182b205485", TypeName = "string", Name = "Name" },
+                            new SpreadAssetSchemaField { Id = "field_1022eaa5231240fe8e5eb8d0c7172be2", TypeName = "AnimationCurve", Name = "Curve" },
+                            new SpreadAssetSchemaField { Id = "field_ab9b469c0cba48d4b9598e87c9f659fa", TypeName = "double", Name = "DoubleNumber" },
+                            new SpreadAssetSchemaField { Id = "field_cf1395aefdab4582a69f84dbb239cf04", TypeName = "TestScript", Name = "Prefab" },
                         }
                     },
                 }

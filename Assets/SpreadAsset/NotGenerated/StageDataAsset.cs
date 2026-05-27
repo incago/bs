@@ -11,12 +11,18 @@ namespace SpreadAsset.Generated
         [SerializeField] private string _lastName;
         [SerializeField] private float _weight;
         [SerializeField] private int[] _roomDataIds;
+        [SerializeField] private SpreadAsset.NotGenerated.UserEnum _type;
+        [SerializeField] private TestScript _prefab;
+        [SerializeField] private AnimationCurve _curve;
 
         public int Id => _id;
         public string FirstName => _firstName;
         public string LastName => _lastName;
         public float Weight => _weight;
         public int[] RoomDataIds => _roomDataIds;
+        public SpreadAsset.NotGenerated.UserEnum Type => _type;
+        public TestScript Prefab => _prefab;
+        public AnimationCurve Curve => _curve;
     }
 
     [System.Serializable]
@@ -24,9 +30,15 @@ namespace SpreadAsset.Generated
     {
         [SerializeField] private int _id;
         [SerializeField] private string _name;
+        [SerializeField] private AnimationCurve _curve;
+        [SerializeField] private double _doubleNumber;
+        [SerializeField] private TestScript _prefab;
 
         public int Id => _id;
         public string Name => _name;
+        public AnimationCurve Curve => _curve;
+        public double DoubleNumber => _doubleNumber;
+        public TestScript Prefab => _prefab;
     }
 
     public sealed class StageDataAsset : SpreadAssetObject
